@@ -1,0 +1,38 @@
+#!/bin/sh
+### spoca-ch-soho_tracking
+#PBS -N spoca-ch-soho_tracking
+#PBS -M xavier.bonnin@obspm.fr
+#PBS -m bae
+#PBS -e /obs/helio/hfc/frc/spoca/logs/spoca-ch-soho_tracking.e$PBS_JOBID
+#PBS -o /obs/helio/hfc/frc/spoca/logs/spoca-ch-soho_tracking.o$PBS_JOBID
+#PBS -l nodes=1:ppn=4,walltime=24:00:00,mem=1gb
+
+# Script to launch spoca_hfc_tracking.py
+
+##Set paths
+SRC_DIR=/obs/helio/hfc/frc/spoca 
+WORK_DIR=/travail/helio/hfc/frc/spoca
+PRODUCT_DIR=/data/helio/hfc/frc/spoca-ch
+MAP_DIR=/poubelle/helio/hfc/frc/spoca-ch
+
+##Append extra python modules' path to $PYTHONPATH
+PYTHONPATH=$PYTHONPATH:$SRC_DIR/lib/python
+export PYTHONPATH
+
+#Input arguments (edit this part)
+CONFIG_FILE=$SRC_DIR/config/EIT_CH.tracking.config
+HISTORY_FILE=$PRODUCT_DIR/spoca-ch-soho_tracking.history
+LOG_FILE=$PRODUCT_DIR/spoca-ch-soho_tracking.log
+STARTTIME=1996-01-01T00:00:00
+ENDTIME=2013-12-31T23:59:59
+
+SCRIPT=$SRC_DIR/lib/python/spoca_hfc_tracking.py
+echo "Running $SCRIPT..."
+time python $SCRIPT -V -D -C -s $STARTTIME -e $ENDTIME \
+    -m $MAP_DIR -o $PRODUCT_DIR \
+    -h $HISTORY_FILE \
+    -l $LOG_FILE $CONFIG_FILE 
+echo "Running $SCRIPT...done"
+
+
+

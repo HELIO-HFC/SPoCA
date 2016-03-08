@@ -1,0 +1,5 @@
+ID_FRC_INFO;INSTITUT;CODE;VERSION;FEATURE_NAME;TARGET_NAME;TARGET_CLASS;ENC_MET;PERSON;CONTACT;REFERENCE;URL
+1;OBSPM;SPOCA;3.0;ACTIVE REGIONS;SUN;STAR;CHAINCODE;Xavier Bonnin;xavier.bonnin@obspm.fr;DOI: 10.1051/0004-6361/200811416;http://sdoatsidc.oma.be/web/sdoatsidc/SoftwareSPoCA
+2;OBSPM;SPOCA;3.0;CORONAL HOLES;SUN;STAR;CHAINCODE;Xavier Bonnin;xavier.bonnin@obspm.fr;DOI: 10.1051/0004-6361/200811416;http://sdoatsidc.oma.be/web/sdoatsidc/SoftwareSPoCA
+3;IAS;SPOCA;3.0;ACTIVE REGIONS;SUN;STAR;CHAINCODE;Xavier Bonnin;xavier.bonnin@obspm.fr;DOI: 10.1051/0004-6361/200811416;http://sdoatsidc.oma.be/web/sdoatsidc/SoftwareSPoCA
+4;IAS;SPOCA;3.0;CORONAL HOLES;SUN;STAR;CHAINCODE;Xavier Bonnin;xavier.bonnin@obspm.fr;DOI: 10.1051/0004-6361/200811416;http://sdoatsidc.oma.be/web/sdoatsidc/SoftwareSPoCA

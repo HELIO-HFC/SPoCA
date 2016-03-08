@@ -1,0 +1,32 @@
+ ---------------------------
+   how to run spoca for HFC
+ ---------------------------
+ X.Bonnin, 05-MAY-2014
+
+
+ GENERAL DESCRIPTION
+
+ The directory /hfc contains all of the programs to launch and run the 
+ SPOCA code for the HFC. It stores two folders:
+	
+	/devtest	dev. version of the SPOCA HFC library
+	
+	/prod 		stable version of the SPOCA HFC library
+
+
+ LAUNCHING SPOCA 
+
+ All of the scripts to run SPoCA can be found in the /scripts sub-directories.
+ Before launching a script be sure that the spoca code is correclty installed
+ (see install.txt), and that paths and environmment variables are correctly
+ defined. 
+
+ Especially, for slurm scripts you must define input options to provide
+ to the cluster/grid (e.g., Time of computation, Memory required, etc)
+ in the header of the file. See http://dio.obspm.fr/Calcul/tycho/ for 
+ more explanations about job submission (in french).
+
+ To run a bash script, enter : bash name_of_the_script.sh
+ To run a slurm script, enter: qsub name_of_the_script.slurm
+
+ To see the status of the job, enter: squeue 

@@ -1,0 +1,45 @@
+;IDL batch file to produce a binary runtime program (.sav)
+;of the runtime_eit_prep.pro routine.
+;eit and ontology SSW packages must be loaded before
+;running this script.
+;
+; WARNING: $HOME/ssw/soho/mdi/idl_old/gen/ys_util/strsplit.pro
+;          must be removed from the compilation before 
+;          run this script!
+;
+;X.Bonnin, 23-MAY-2012
+
+sep = path_sep()
+
+idl_dir = '/obs/helio/hfc/frc/spoca/lib/idl'
+target_dir=getenv('SPOCA_IDL_BIN_DIR')
+if (target_dir eq '') then target_dir=idl_dir+sep+'bin'
+
+ssw_dir = getenv('SSW')
+if (ssw_dir eq '') then ssw_dir = '/obs/helio/library/idl/ssw'
+
+sswdb_dir = getenv('SSWDB')
+if (sswdb_dir eq '') then sswdb_dir = '/obs/helio/library/idl/ssw/sswdb'
+
+pathsep = path_sep(/search_path) 
+!PATH = expand_path('+'+idl_dir+'/prep') + pathsep + !PATH
+!PATH = expand_path('+'+ssw_dir) + pathsep + !PATH
+!PATH = expand_path('+'+sswdb_dir) + pathsep + !PATH
+
+; Compile ssw routines
+;.compile eit_prep, anytim2utc, datatype, str2utc
+;.compile valid_num, delvarx, boost_array, utc2int
+;.compile tag_exist, date2mjd, check_int_time, get_leap_sec
+;.compile exist, is_string, valid_fits, is_blank, mrd_head
+;.compile err_state, close_lun, eit_file2path, data_chk
+;.compile is_gsfcvms, get_logenv, break_file, os_family
+;.compile have_tag, trim, grep, append_arr, concat_dir
+;.compile /obs/helio/library/idl/ssw/gen/idl/io/readcol
+
+.compile runtime_eit_prep
+resolve_all,/CONTINUE
+
+filename = target_dir+'/runtime_eit_prep.sav'
+save, /ROUTINES, filename=filename, description='Runtime IDL program to call runtime_eit_prep.pro', $
+      /VERBOSE, /EMBEDDED
+print,filename+' saved'

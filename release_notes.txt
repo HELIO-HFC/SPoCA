@@ -1,0 +1,12 @@
+Notes about the SIDC SPoCA releases
+-----------------------------------
+
+* 2014-07-21 - New release
+
+ There is an error during the compilation!
+ Please read releases/2014-07-21/Known_issues/notes.txt for more details
+
+* 2015-03-03 - New release
+ 
+ -DDEBUG option should be removed from the CCPFLAGS in the makemake.sh file to avoid
+ production of extra fits files.

@@ -1,0 +1,65 @@
+#!/bin/sh
+### spoca-ar-soho_processing
+#PBS -N spoca-ar-soho_processing
+#PBS -M xavier.bonnin@obspm.fr
+#PBS -m bae
+#PBS -e /obs/helio/hfc/frc/spoca/logs/spoca-ar-soho_processing.e$PBS_JOBID
+#PBS -o /obs/helio/hfc/frc/spoca/logs/spoca-ar-soho_processing.o$PBS_JOBID
+#PBS -l nodes=1:ppn=4,walltime=100:00:00,mem=1gb
+
+# Script to run the spoca-ar-soho code on
+# the siolino.obspm.fr cluster.
+# To submit a job to Torque, enter:
+#     qsub spoca-ar-soho_processing.pbs
+# To check the job's status, enter:
+#     qstat -a | grep spoca-ar-soho_processing
+
+## Set paths
+SRC_DIR=/obs/helio/hfc/frc/spoca 
+WORK_DIR=/travail/helio/hfc/frc/spoca
+PRODUCT_DIR=/data/helio/hfc/frc/spoca-ar
+DATA_DIR=/poubelle/helio/hfc/frc/spoca-ar
+
+## Append extra python modules' path to $PYTHONPATH
+PYTHONPATH=$PYTHONPATH:$SRC_DIR/lib/python
+export PYTHONPATH
+
+## SSW environment variable required
+SSW=/obs/helio/library/idl/ssw
+export SSW
+SSW_ONTOLOGY=$SSW/vobs/ontology
+export SSW_ONTOLOGY
+SSWDB=$SSW/sswdb
+export SSWDB
+SSW_EIT_RESPONSE=$SSW/soho/eit/response
+export SSW_EIT_RESPONSE
+
+## Set output log file
+JOBID=`echo $PBS_JOBID | cut -d"." -f1`
+LOGFILE=$SRC_DIR/logs/spoca-ar-soho_job.l$JOBID
+
+## Input arguments
+CONFIG_FILE=$SRC_DIR/config/EIT_AR.segmentation.config
+HISTORY_FILE=$PRODUCT_DIR/spoca-ar-soho.history
+CENTERS_FILE=$PRODUCT_DIR/spoca-ar-soho.centers
+NPROC=3
+STARTTIME=2013-01-01T00:00:00
+ENDTIME=2013-12-31T23:59:59
+#CADENCE=-1
+
+echo Job Name is $PBS_JOBNAME
+echo Job ID is $JOBID
+echo Working directory is $PBS_O_WORKDIR
+echo Ressources requested are:
+echo "nodes=1:ppn=4,walltime=36:00:00,mem=1gb"
+echo "This job run on the following node(s) :" 
+echo `cat $PBS_NODEFILE`
+SCRIPT=$SRC_DIR/lib/python/spoca_hfc_processing.py
+echo "Running $SCRIPT..."
+time python $SCRIPT -V -Q -R \
+    -h $HISTORY_FILE -b $CENTERS_FILE -p $NPROC \
+    -s $STARTTIME -e $ENDTIME \
+    -d $DATA_DIR -o $PRODUCT_DIR $CONFIG_FILE
+echo "Running $SCRIPT...done"
+
+

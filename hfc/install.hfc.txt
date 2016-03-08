@@ -1,0 +1,21 @@
+ ---------------------
+   Install spoca_hfc
+ ---------------------
+ X.Bonnin, 25-FEB-2014
+
+ SPoCA code is dedicated to detected ACTIVE REGIONS and CORONAL HOLES
+ on EUV images.
+ The code is developped and maintained by the Belgian SIDC SDO Data Center (SSDC).
+ More information about SPoCA and SSDC can be found in http://sdoatsidc.oma.be/web/sdoatsidc/LatestNews.
+
+ To retrieve the latest SPoCa code, contact the SPoCA developpers. 
+ 
+ Once SPoCA source files are on your local disk, you must compiled C++ (.cpp) files to 
+ create executables (.x). 
+ To do this, follow instructions provided in the INSTALLATION text file.
+
+ To set up the SPOCA HFC environment variables, please use the shell scripts 
+ in the scripts directory.
+
+ To run SPoCA executables for the HFC purpose, use the scripts files provided
+ in the sub-directory hfc/prod/scripts.
