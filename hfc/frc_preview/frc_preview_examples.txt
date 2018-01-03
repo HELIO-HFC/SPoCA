@@ -1,0 +1,13 @@
+python preview_frc.py ftp://ftpbass2000.obspm.fr/pub/helio/spoca-ar/1996/spoca-ar_20_19960115T213921_soho_init.csv ftp://ftpbass2000.obspm.fr/pub/helio/spoca-ar/1996/spoca-ar_20_19960115T213921_soho_feat.csv -i ftp://ftpbass2000.obspm.fr/temp/qlk/soho/eit/1996/efz19960115.213921.png
+
+python preview_frc.py ftp://ftpbass2000.obspm.fr/pub/helio/spoca-ar/2010/spoca-ar_20_20100101T130012_soho_init.csv ftp://ftpbass2000.obspm.fr/pub/helio/spoca-ar/2010/spoca-ar_20_20100101T130012_soho_feat.csv -i ftp://ftpbass2000.obspm.fr/temp/qlk/soho/eit/2010/efz20100101.124808.png
+
+python preview_frc.py ftp://ftpbass2000.obspm.fr/pub/helio/mdiss/2001/mdiss_103_20010502T111132_soho_init.csv ftp://ftpbass2000.obspm.fr/pub/helio/mdiss/2001/mdiss_103_20010502T111132_soho_feat.csv -i ftp://ftpbass2000.obspm.fr/temp/qlk/soho/mdi/2001/fd_Ic_6h_01d.3043.0002.png
+
+python preview_frc.py ftp://ftpbass2000.obspm.fr/pub/helio/sdoss/2012/sdoss_105_20120101T140000_sdo_init.csv ftp://ftpbass2000.obspm.fr/pub/helio/sdoss/2012/sdoss_105_20120101T140000_sdo_feat.csv -i ftp://ftpbass2000.obspm.fr/temp/qlk/sdo/hmi/2012/hmi.ic_45s.2012.01.01_14_00_00_TAI.continuum.png
+
+python preview_frc.py ftp://ftpbass2000.obspm.fr/pub/helio/spoca-ar/2000/spoca-ar_20_20000101T130015_soho_init.csv ftp://ftpbass2000.obspm.fr/pub/helio/spoca-ar/2000/spoca-ar_20_20000101T130015_soho_feat.csv -i ftp://ftpbass2000.obspm.fr/temp/qlk/soho/eit/2000/efz20000101.124810.png
+
+python preview_frc.py ftp://ftpbass2000.obspm.fr/pub/helio/spoca-ar/1997/spoca-ar_20_19971203T130014_soho_init.csv ftp://ftpbass2000.obspm.fr/pub/helio/spoca-ar/1997/spoca-ar_20_19971203T130014_soho_feat.csv -i ftp://ftpbass2000.obspm.fr/temp/qlk/soho/eit/1997/efz19971203.130014.png
+
+python preview_frc.py ftp://ftpbass2000.obspm.fr/pub/helio/spoca-ar/2011/spoca-ar_20_20110508T160000_sdo_init.csv ftp://ftpbass2000.obspm.fr/pub/helio/spoca-ar/2011/spoca-ar_20_20110508T160000_sdo_feat.csv -i ftp://ftpbass2000.obspm.fr/temp/qlk/sdo/aia/2011/aia.lev1.193A_2011-05-08T16%3A59%3A55.84Z.image_lev1.png
