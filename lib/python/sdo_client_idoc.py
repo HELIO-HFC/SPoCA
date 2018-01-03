@@ -255,7 +255,7 @@ class Sdo_data():
 def main():
 	d1=datetime(2012,8,10,0,0,0)
 	d2=d1+timedelta(days=1)
-	sdo_data_list=search(DATES=[d1,d2],waves=['335'],cadence=['1h'],nb_res_max=10) 
+	sdo_data_list=search(DATES=[d1,d2],waves=['335'],cadence=['1h'],nb_res_max=10)
 	for data in sdo_data_list :
 		data.get_file(target_dir='results')
 

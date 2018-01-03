@@ -4,6 +4,7 @@
 """
 Classes called by the spoca_hfc_processing module.
 @author: Xavier Bonnin (CNRS, LESIA)
+@modified by: Christian RENIE (Obs.Paris, LESIA)
 """
 
 import os
@@ -16,10 +17,17 @@ from datetime import datetime, timedelta
 from math import radians
 import ftplib
 import numpy as np
-import pyfits
+#from numba import jit
+#import ordereddict
+#import pyfits
+from astropy.io import fits
 from improlib import image2chain, poly_area
 from wcs import convert_hpc_hg
 from ssw import tim2carr
+#from memory_profiler import profile
+import gc
+from gc import *
+import spoca_hfc_methods
 
 # Import spoca hfc global variables
 try:
@@ -325,7 +333,7 @@ class segmentation():
                 config_file=spoca_config,
                 centers_file=self.centers_file)
             spoca_cmd = [spoca_bin] + spoca_args
-            LOG.info("Running spoca classification:\
+            LOG.debug("Running spoca classification:\
              \n\t" + " ".join(spoca_cmd))
             spoca_process = subprocess.Popen(
                 spoca_cmd,
@@ -334,7 +342,7 @@ class segmentation():
                 shell=False)
             output, errors = spoca_process.communicate()
             if spoca_process.wait() == 0:
-                LOG.debug("Sucessfully ran spoca command:\
+                LOG.info("Sucessfully ran spoca command:\
                           \n\t %s, output: %s, errors: %s",
                           ' '.join(spoca_cmd), str(output), str(errors))
             else:
@@ -347,7 +355,7 @@ class segmentation():
         return current_map
 
     # Method to run classification
-    def run_getmap(self, segmap_file,
+    def run_getmap(self, prepfiles, segmap_file,
                    map_rootname=None,
                    overwrite=False,
                    verbose=True,
@@ -401,10 +409,10 @@ class segmentation():
         if not (os.path.isfile(current_map)) or (overwrite):
         # Build and run spoca command
             spoca_args = self.build_arguments(
-                [segmap_file], current_map,
+                [segmap_file,prepfiles[0]], current_map,
                 config_file=spoca_config)
             spoca_cmd = [spoca_bin] + spoca_args
-            LOG.info("Running SPoCA get map: \n\t" + " ".join(spoca_cmd))
+            LOG.debug("Running SPoCA get map: \n\t" + " ".join(spoca_cmd))
             spoca_process = subprocess.Popen(
                 spoca_cmd,
                 stdout=subprocess.PIPE,
@@ -569,7 +577,7 @@ class spoca_hfc(threading.Thread, segmentation):
             return True
         else:
             return False
-
+ #   @profile
     def run(self):
 
         """Method to run the spoca hfc job"""
@@ -602,7 +610,6 @@ class spoca_hfc(threading.Thread, segmentation):
             return False
 
         for i, current_set in enumerate(fileset):
-
             current_file = current_set["fileid"]
             current_output_filename = current_set["output_filename"]
 
@@ -634,6 +641,7 @@ class spoca_hfc(threading.Thread, segmentation):
                                     data_directory=data_directory,
                                     output_directory=output_directory,
                                     batch_directory=batch_directory)
+            LOG.info("file2process is %s ...", file2process)
             if (len(file2process) == 0):
                 LOG.error("Pre-processing %s file...failed", localFile)
                 self.terminated = True
@@ -641,21 +649,15 @@ class spoca_hfc(threading.Thread, segmentation):
             else:
                 LOG.info("%s saved", file2process)
                 self.prepset.append(file2process)
-                self.batch.append(
-                    [os.path.join(batch_directory,
-                                  os.path.basename(file2process)
-                                  + ".csh"),
-                        os.path.join(batch_directory,
-                                     os.path.basename(file2process)
-                                     + ".batch")])
 
             # Load FITS header info for _init.csv file
             current_header, current_data = load_fits(file2process)
             if (current_header is None):
                 self.terminated = True
                 return False
-            self.dataset.append(current_data)
 
+            self.dataset.append(current_data)
+            del current_data
             # Write quicklook image
             current_header['QCLK_FNAME'] = ""
             if (self.write_qlk):
@@ -689,7 +691,7 @@ class spoca_hfc(threading.Thread, segmentation):
                 "init_info",
                ID_OBSERVATIONS=i + 1,
                OBSERVATORY_ID=obs_id_i,
-               DATE_OBS=hfc_date(current_header['DATE_OBS']),
+               DATE_OBS=hfc_date(current_header['DATE-OBS']),
                DATE_END=hfc_date(current_header['DATE_END']),
                JDINT=current_header['JDINT'],
                JDFRAC=current_header['JDFRAC'],
@@ -716,7 +718,7 @@ class spoca_hfc(threading.Thread, segmentation):
                SPATIAL_FRAME_TYPE="helioprojective-cartesian coordinates",
                SPATIAL_ORIGIN=observatory.upper(),
                PROCESSING_LVL="3",
-               COMMENT=current_header['COMMENT'],
+               #COMMENT=current_header['COMMENT'],
                LOC_FILENAME=localFile,
                URL=current_url,
                QCLK_FNAME=current_header['QCLK_FNAME'],
@@ -725,8 +727,10 @@ class spoca_hfc(threading.Thread, segmentation):
                D_SUN=current_header['D_SUN'])):
                 LOG.error("hfc_instance has no attribute init_info!")
                 self.terminated = True
+                del current_header
                 return False
-
+            gc.collect()
+            
         if (len(self.dataset) != nfile):
             LOG.warning("Empty set!")
             self.terminated = True
@@ -745,7 +749,7 @@ class spoca_hfc(threading.Thread, segmentation):
 
         hfc.init_info[i]["FEAT_FILENAME"] = init_filepath
 
-        if (write_csv(hfc.init_info, init_filepath,
+        if (write_csv(hfc.init_info, init_filepath,  
                       overwrite=self.overwrite)):
             LOG.info("%s saved", init_filepath)
             setattr(hfc, "init_file", init_filepath)
@@ -777,7 +781,7 @@ class spoca_hfc(threading.Thread, segmentation):
         new_ext = ".%smap.fits" % (self.feature.lower())
         featmap_rootname = classmap.replace(".map.fits", new_ext)
 
-        featmap = self.run_getmap(classmap,
+        featmap = self.run_getmap(self.prepset, classmap,
                                   map_rootname=featmap_rootname,
                                   overwrite=self.overwrite)
 
@@ -819,7 +823,8 @@ class spoca_hfc(threading.Thread, segmentation):
                         feat["FEAT_FILENAME"] = feat_filepath
                         feat["RUN_DATE"] = TODAY.strftime(HFC_TFORMAT)
 
-                    if (write_csv(hfc.feat_info, feat_filepath,
+                    fieldnames = hfc.feat_info[0].order()
+                    if (write_csv(hfc.feat_info, feat_filepath, fieldnames=fieldnames, 
                             overwrite=self.overwrite)):
                         LOG.info("%s saved", feat_filepath)
                         setattr(hfc, "feat_file", feat_filepath)
@@ -873,6 +878,8 @@ class spoca_hfc(threading.Thread, segmentation):
                 if (os.path.isfile(f)):
                     os.remove(f)
                     LOG.info("%s deleted", f)
+        # pour limiter la fuite de memoire            
+        del self.dataset            
 
 
 # CLASS TO RUN THE SPOCA TRACKING =============================
@@ -886,6 +893,7 @@ class tracking():
         self.map_types = {'A': 'ARMap', 'C': 'CHMap'}
         self.data_directory = "."
         self.output_directory = "."
+        self.hfc = hfc()
 
     # Method to load input parameters from configuration file
     def load_parameters(self, configfile):
@@ -917,7 +925,7 @@ class tracking():
         if not os.access(self.output_directory, os.W_OK):
             return False, "Output directory is not writable: " \
                 + str(self.output_directory)
-        if not os.path.exists(self.args["bin"]):
+        if not os.path.exists(self.args["CLASS_EXE"]):
             return False, "Could not find executable: " + str(self.args["bin"])
 
         for m in self.args["maps"].split(','):
@@ -928,7 +936,7 @@ class tracking():
             if not arguments:
                 return False, "Could not create arguments"
 
-            bin_path = os.path.join(self.args["bin"])
+            bin_path = os.path.join(self.args["CLASS_EXE"])
             if not (os.path.isfile(bin_path)):
                 return False, bin_path + " does not exist!"
             test_args = [bin_path] + arguments + ['--help']
@@ -944,20 +952,24 @@ class tracking():
 
     # Method to build the list of input
     # arguments to provide to the tracking.x program
+    # tracking.x -C config_file fitsfiles_list
     def build_arguments(self, fitsfiles):
 
+    #    arguments = list()
+    #    for key, value in self.args.items():
+    #        if (key == "maps") or (key == "imageType"):
+    #            continue
+
+    #        if len(key) > 1:
+    #            arguments.append("--" + key)
+    #        else:
+    #            arguments.append("-" + key)
+    #        if value:
+    #            arguments.append(value)
+
         arguments = list()
-        for key, value in self.args.items():
-            if (key == "maps") or (key == "imageType"):
-                continue
-
-            if len(key) > 1:
-                arguments.append("--" + key)
-            else:
-                arguments.append("-" + key)
-            if value:
-                arguments.append(value)
-
+        arguments.append("-C")
+        arguments.append(self.args['CLASS_CONFIG'])
         for fitsfile in fitsfiles:
             arguments.append(os.path.abspath(fitsfile))
 
@@ -974,7 +986,8 @@ class tracking():
 
         if (map_type == "A"):
             url = FTP_URL + "/spoca-ar"
-            map_type = "ARMap"
+            #map_type = "ARMap"
+            map_type = "armap"
         elif (map_type == "C"):
             url = FTP_URL + "/spoca-ch"
             map_type = "CHMap"
@@ -1002,9 +1015,10 @@ class tracking():
                                 current_file.split()[-1]
                                 for current_file in current_fileList])
         else:
-            fileList = glob.glob(os.path.join(
-                data_directory, code + "_*_????????T??????_"
-                + obs + "." + map_type + ".fits"))
+            fileList = glob.glob(os.path.join(data_directory, code + "*" + obs + "." + map_type + ".fits"))
+            #fileList = glob.glob(os.path.join(
+            #    data_directory, code + "_*_????????T??????_"
+            #    + obs + "." + map_type + ".fits"))
 
         # Extend time range
         stime = starttime - timedelta(seconds=6)
@@ -1018,11 +1032,11 @@ class tracking():
             if (current_obs != obs):
                 continue
             current_date = current_items[2]
-            current_date = datetime.strptime(current_date, CPT_TFORMAT)
+            current_date = datetime.strptime(current_date, "%Y%m%dT%H%M%S")
             if (current_date >= stime) and (current_date <= etime):
                 mapList.append(current_file)
 
-        return mapList
+        return sorted(mapList)
 
 # Method to run the spoca tracking code
 # (calling its cpp binary executable)
@@ -1030,7 +1044,8 @@ class tracking():
         if (len(mapList) == 0):
             return False
 
-        spoca_bin = self.args['bin']
+        spoca_bin = self.args['CLASS_EXE']
+        spoca_bin_config = self.args['CLASS_CONFIG']
         data_directory = self.data_directory
 
         # Check that map files exist
@@ -1057,12 +1072,11 @@ class tracking():
 
         # Run spoca tracking binary program
         spoca_args = self.build_arguments(mapList)
-        spoca_cmd = [spoca_bin] + spoca_args[2:]
-        LOG.info("Running --> " + " ".join(spoca_cmd) + "...")
-        spoca_process = subprocess.Popen(spoca_cmd,
-                                         stdout=subprocess.PIPE,
-                                         stderr=subprocess.PIPE,
-                                         shell=False)
+        spoca_cmd = [spoca_bin] + spoca_args[:]
+        #args_part = " ".join(spoca_args)
+        #spoca_cmd = spoca_bin + " " + args_part
+        LOG.debug("Running --> " + " ".join(spoca_cmd) + "...")
+        spoca_process = subprocess.Popen(spoca_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
         output, errors = spoca_process.communicate()
         if (spoca_process.wait() == 0):
             #LOG.debug("Sucessfully ran spoca command
@@ -1142,7 +1156,7 @@ class hfc():
 
         try:
             LOG.info("Opening %s", mapfile)
-            content = pyfits.open(mapfile)
+            content = fits.open(mapfile)
         except IOError:
             LOG.error("Can not open %s: ", mapfile)
             return []
@@ -1156,13 +1170,19 @@ class hfc():
 
         for current_content in content:		
             if not (current_content.name.upper() in map_data):
-                map_data[current_content.name.upper()] = current_content
+                if (current_content.name.endswith("Stats")):
+                    map_data['STATS'] = current_content
+                else:
+                    map_data[current_content.name.upper()] = current_content
 
         if not (keymap in map_data):
             LOG.error("No %s table in %s!", keymap, mapfile)
             return []
         if not ("REGIONS" in map_data):
             LOG.error("No REGIONS table in %s!", mapfile)
+            return []
+        if not ("STATS" in map_data):
+            LOG.error("No STATS table in %s!", mapfile)
             return []
 
         # Number of feature detected
@@ -1181,6 +1201,7 @@ class hfc():
             LOG.info("%i features found in %s", nfeat, mapfile)
 
         if (nfeat == 0):
+            content.close()
             return []
 
         regions = map_data['REGIONS'].data
@@ -1212,6 +1233,7 @@ class hfc():
             # Compute some parameters (center of mass, intensity min, max, etc.)
             mask_i = (mask == value)
             stats = compute_feat_stats(mask_i * image)
+            stats_sidc = map_data['STATS'].data
 
             current_feat = ordered_dict()
             # Save some parameters specific to current feature
@@ -1252,10 +1274,14 @@ class hfc():
                 return []
 
             current_feat["FRC_INFO_ID"] = int(self.frc_info[0]['ID_FRC_INFO'])
-            current_feat["FEAT_X_PIX"] = stats["FEAT_X_PIX"]
-            current_feat["FEAT_Y_PIX"] = stats["FEAT_Y_PIX"]
-            current_feat["FEAT_X_ARCSEC"] = cdelt1 * (stats["FEAT_X_PIX"] - crpix1)
-            current_feat["FEAT_Y_ARCSEC"] = cdelt2 * (stats["FEAT_Y_PIX"] - crpix2)
+            #current_feat["FEAT_X_PIX"] = stats["FEAT_X_PIX"]
+            #current_feat["FEAT_Y_PIX"] = stats["FEAT_Y_PIX"]            
+            #current_feat["FEAT_X_ARCSEC"] = cdelt1 * (stats["FEAT_X_PIX"] - crpix1)
+            #current_feat["FEAT_Y_ARCSEC"] = cdelt2 * (stats["FEAT_Y_PIX"] - crpix2)
+            current_feat["FEAT_X_PIX"] = stats_sidc[i][5]
+            current_feat["FEAT_Y_PIX"] = stats_sidc[i][6]
+            current_feat["FEAT_X_ARCSEC"] = cdelt1*(stats_sidc[i][5] - crpix1)
+            current_feat["FEAT_Y_ARCSEC"] = cdelt2*(stats_sidc[i][6] - crpix2)
             current_feat["FEAT_HG_LONG_DEG"], \
                 current_feat["FEAT_HG_LAT_DEG"] = \
                 convert_hpc_hg(Rsun, Dsun, 'arcsec', 'arcsec', b0, 0.0,
@@ -1397,16 +1423,16 @@ class hfc():
             return []
 
         # Open map file
-        content = pyfits.open(mapfile)
+        content = fits.open(mapfile)
         map_data = {'PRIMARY': [], 'REGIONS': [], 'TRACKINGRELATIONS': [],
                     'STATS': [], 'MAP': [], 'CHAINCODES': []}
         for current_content in content:
-            if (current_content.name.endswith("STATS")):
+            if (current_content.name.endswith("Stats")):
                 map_data['STATS'].append(current_content)
-            elif (current_content.name.endswith("MAP")):
+            elif (current_content.name.endswith("Map")):
                 map_data['MAP'].append(current_content)
             else:
-                map_data[current_content.name].append(current_content)
+                map_data[current_content.name.upper()].append(current_content)
 
         if (len(map_data['REGIONS']) == 0):
             LOG.warning("Empty regions dataset in %s!", mapfile)
@@ -1418,6 +1444,7 @@ class hfc():
 
         if (regions.data is None):
             LOG.warning("Empty ragions dataset in %s!", mapfile)
+            content.close()
             return []
 
         for i, current_region in enumerate(regions.data):
@@ -1429,7 +1456,8 @@ class hfc():
             current_track = ordered_dict()
             if (self.feature_name == "ACTIVE REGIONS"):
                 current_track['ID_AR'] = i + 1
-                current_track['TRACK_ID'] = current_region[2]
+                #current_track['TRACK_ID'] = current_region[2]
+                current_track['TRACK_ID'] = current_region[11]
             elif (self.feature_name == "CORONAL HOLES"):
                 current_track['ID_CH'] = i + 1
                 current_track['TRACK_ID'] = current_region[2]
@@ -1448,3 +1476,6 @@ class hfc():
         content.close()
 
         return trackList
+
+if __name__ == "__main__":
+	print "spoca_hfc_classes for the spoca_hfc_classification module"

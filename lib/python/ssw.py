@@ -1,17 +1,39 @@
 #! /usr/bin/env python
 
+"""
+Python module that performs some SolarSoft functions
+"""
+
+#from numba import jit
 import numpy
 from math import pi, cos, acos, sin, asin, tan, \
     atan, atan2, sqrt, degrees
 
+# Mandatory
+__version__ = "1.0.1"
+__author__ = "Xavier Bonnin (CNRS, LESIA)"
+__date__ = "2015-11-12"
+
+# Optional
+__institute__ = "LESIA, Observatoire de Paris"
+__project__ = "HELIO-HFC"
+__license__ = ""
+__credit__ = [""]
+__maintainer__ = ""
+__email__ = ""
+__change__ = {"1.0.0":"First release","1.0.1":"Add numba optimization"}
+
 Radeg = 180./pi
 
-# Convert rectangular coordinates [X,Y]
-# to polar coordinates [rho,theta]
-# Input parameters X and Y can
-# be scalars or two lists of n elements.
-# X.Bonnin (LESIA), 03-JUN-2012
 def recpol(x,y,DEGREES=False):
+
+    """
+	Convert rectangular coordinates [X,Y]
+	to polar coordinates [rho,theta]
+	Input parameters X and Y can
+	be scalars or two lists of n elements.
+	X.Bonnin (LESIA), 03-JUN-2012
+    """
 
     islist = isinstance(x,list)
     if not (islist):
@@ -41,9 +63,12 @@ def recpol(x,y,DEGREES=False):
 
     return r, theta
 
-# Adapted from get_sun.pro ssw routine.
-# X.Bonnin (LESIA), 03-JUN-2012
 def get_sun(datetime):
+
+    """
+	Adapted from get_sun.pro ssw routine.
+	X.Bonnin (LESIA), 03-JUN-2012
+    """
 
     islist = isinstance(datetime,list)
     if not (islist):
@@ -159,9 +184,14 @@ def get_sun(datetime):
         ephem = ephem[0]
     return ephem
 
-# Adapted from tim2carr.pro ssw routine
-# X.Bonnin (LESIA), 03-JUN-2012
+
 def tim2carr(date,offset=0.0,DC=False):
+	
+    """
+	Adapted from tim2carr.pro ssw routine
+	X.Bonnin (LESIA), 03-JUN-2012
+    """
+
     max_diff = 12.0/360.0
 
     islist=isinstance(date,list)

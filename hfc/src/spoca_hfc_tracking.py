@@ -11,7 +11,6 @@ import glob
 from datetime import datetime, timedelta
 import time
 
-# Import spoca hfc global variables
 try:
     from spoca_hfc_globals import *
 except:
@@ -50,7 +49,8 @@ HOSTNAME = socket.gethostname()
 
 # Path definitions (defined for helio@siolino.obspm.fr)
 EIT_CCP_BIN="/obs/helio/hfc/frc/spoca/bin/spoca_eit/tracking.x" # directory containing spoca executables for eit
-AIA_AR_CCP_BIN="/obs/helio/hfc/frc/spoca/bin/spoca_ar_aia/tracking.x" # directory containing spoca executables for aia/ar
+#AIA_AR_CCP_BIN="/obs/helio/hfc/frc/spoca/bin/spoca_ar_aia/tracking.x" # directory containing spoca executables for aia/ar
+AIA_AR_CCP_BIN="/data/renie/SPOCA-IAS/SPOCA-AR/spoca/src/sidc/releases/current/SPoCA/bin2/tracking.x" # directory containing spoca executables for aia/ar
 AIA_CH_CCP_BIN="/obs/helio/hfc/frc/spoca/bin/spoca_ch_aia/tracking.x" # directory containing spoca executables for aia/ch
 
 # Time inputs
@@ -76,32 +76,35 @@ def setup_spoca_hfc(configfile,
 	tracking_instance.set_parameter("version",VERSION)
 	tracking_instance.set_parameter("data_directory",data_directory)
 	tracking_instance.set_parameter("output_directory",output_directory)
+        tracking_instance.set_parameter('observatory', tracking_instance.args["OBSERVATORY"])
+        tracking_instance.set_parameter('bin', tracking_instance.args["CLASS_EXE"])
+        tracking_instance.set_parameter('code', tracking_instance.args["CODE"])
 	# Set SPOCA/EIT input parameters
-       	if (tracking_instance.args["imageType"] == "EIT"):
-		tracking_instance.set_parameter("observatory","SoHO")
-		tracking_instance.set_parameter("bin",EIT_CCP_BIN)
-		if (tracking_instance.args["maps"] == "A"):
-			tracking_instance.set_parameter("code","spoca-ar")
-		elif (tracking_instance.args["maps"] == "C"):
-			tracking_instance.set_parameter("code","spoca-ch")
-		else:
-			log.error("Unknown type of map: "+tracking_instance.args["maps"])
-			sys.exit(1)
+       	#if (tracking_instance.args["imageType"] == "EIT"):
+	#	tracking_instance.set_parameter("observatory","SoHO")
+	#	tracking_instance.set_parameter("bin",EIT_CCP_BIN)
+	#	if (tracking_instance.args["maps"] == "A"):
+	#		tracking_instance.set_parameter("code","spoca-ar")
+	#	elif (tracking_instance.args["maps"] == "C"):
+	#		tracking_instance.set_parameter("code","spoca-ch")
+	#	else:
+	#		log.error("Unknown type of map: "+tracking_instance.args["maps"])
+	#		sys.exit(1)
 	# Set SPOCA/AIA input parameters		
-	elif (tracking_instance.args["imageType"] == "AIA"):
-		tracking_instance.set_parameter("observatory","SDO")
-		if (tracking_instance.args["maps"] == "A"):
-			tracking_instance.set_parameter("bin", AIA_AR_CCP_BIN)
-			tracking_instance.set_parameter("code", "spoca-ar")
-		elif (tracking_instance.args["maps"] == "C"):
-			tracking_instance.set_parameter("bin", AIA_CH_CCP_BIN)
-			tracking_instance.set_parameter("code", "spoca-ch")
-		else:
-			log.error("Unknown type of map: "+tracking_instance.args["maps"])
-			sys.exit(1)
-	else:
-		log.error("Unknown imageType: "+tracking_instance.args["imageType"])
-		sys.exit(1)
+	#elif (tracking_instance.args["imageType"] == "AIA"):
+	#	tracking_instance.set_parameter("observatory","SDO")
+	#	if (tracking_instance.args["maps"] == "A"):
+	#		tracking_instance.set_parameter("bin", AIA_AR_CCP_BIN)
+	#		tracking_instance.set_parameter("code", "spoca-ar")
+	#	elif (tracking_instance.args["maps"] == "C"):
+	#		tracking_instance.set_parameter("bin", AIA_CH_CCP_BIN)
+	#		tracking_instance.set_parameter("code", "spoca-ch")
+	#	else:
+	#		log.error("Unknown type of map: "+tracking_instance.args["maps"])
+	#		sys.exit(1)
+	#else:
+	#	log.error("Unknown imageType: "+tracking_instance.args["imageType"])
+	#	sys.exit(1)
 
 	ok, reason = tracking_instance.test_parameters()
 	if ok:
@@ -164,10 +167,10 @@ if __name__ == "__main__":
 	              debug = False)	
 
     # Create a logger
-    log = logging.getLogger(SPOCA_HFC_LOGGER)
+    log = logging.getLogger(LOGGER)
     log.info("Starting spoca_hfc_tracking.py on "+HOSTNAME+" ("+TODAY.strftime(HFC_TFORMAT)+")")
 
-    # Check configuration file existence
+    # Check map directory existence
     if not (os.path.isdir(map_directory)):
 	log.warning("%s does not exist!", map_directory)
 	log.warning("use %s as a map directory",output_directory)
@@ -229,9 +232,16 @@ if __name__ == "__main__":
 	    current_output_file="_".join([spoca_job.code.lower(),"".join(str(VERSION).split(".")),
 					  current_date,spoca_job.observatory.lower(),"track.csv"])
 	    current_output_file = os.path.join(output_directory,current_output_file)
-	    current_track_data = hfc(spoca_job.args['maps']
-				     ).map2track(current_map,
-						 output_file=current_output_file)
+                        
+            if (spoca_job.args['maps'] == 'A'):
+                spoca_job.hfc.feature_name = "ACTIVE REGIONS"
+            else:
+                spoca_job.hfc.feature_name = "CORONAL HOLES"
+    
+	    #urrent_track_data = hfc(spoca_job.args['maps']
+	#			     ).map2track(current_map,
+	#					 output_file=current_output_file)
+            current_track_data = spoca_job.hfc.map2track(current_map, output_file=current_output_file)
 	    if not (current_track_data):
 		log.warning("%s has not been processed correctly!",current_map)
 		continue
@@ -241,7 +251,8 @@ if __name__ == "__main__":
 	    fieldnames = current_track_data[0].order()
 	    if (write_csv(current_track_data,current_output_file,fieldnames=fieldnames)):
 		log.info(current_output_file+" saved")
-		processed_maps.append(os.path.basename(current_map))
+                if os.path.basename(current_map) not in processed_maps:
+		    processed_maps.append(os.path.basename(current_map))
 	    
 	if (clean_map):
 	    map2delete=os.path.join(map_directory,os.path.basename(current_set[0]))

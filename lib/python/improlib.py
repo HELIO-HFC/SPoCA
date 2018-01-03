@@ -6,9 +6,23 @@ Image processing module
 @author: X.Bonnin (LESIA, CNRS)
 """
 
+#from numba import jit
 import numpy as np
 from scipy import ndimage
 
+# Mandatory
+__version__ = "1.0.1"
+__author__ = "X.Bonnin (LESIA , CNRS)"
+__date__ = "2015-11-12"
+
+# Optional
+__institute__ = "LESIA, Observatoire de Paris"
+__project__ = "HELIO-HFC"
+__license__ = ""
+__credit__ = [""]
+__maintainer__ = ""
+__email__ = ""
+__change__ = {"1.0.0":"First release","1.0.1":"Add numba optimization"}
 
 def poly_area(x, y):
 
@@ -31,7 +45,6 @@ def poly_area(x, y):
         area += (x_i*y[i+1] - x[i+1]*y[i])*0.5
 
     return abs(area)
-
 
 def image2chain(image, pixel_value,
                 fill=False,
@@ -127,7 +140,6 @@ def chain2image(chaincode,start_pix):
         Y.append(Y[-1] + np.int(ardir[wc,1]))
     return X,Y
 
-
 def closerec(image,open_structure=None,close_structure=None):
 
     """
@@ -151,7 +163,6 @@ def closerec(image,open_structure=None,close_structure=None):
         current_image0,structure=close_structure,mask=binary_image)
 
     return reconstruct_image
-
 
 def fill_holes(image, structure=None):
 

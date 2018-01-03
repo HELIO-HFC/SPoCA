@@ -4,6 +4,8 @@
 """
 HFC wrapper module to run the SPoCA classification program.
 @author: Xavier Bonnin (CNRS, LESIA)
+@modified by: Ymane TAOUFIQ (Obs.Paris)
+@modified by: Christian RENIE (Obs.Paris, LESIA)
 """
 
 import sys
@@ -11,7 +13,22 @@ import os
 import argparse
 from datetime import datetime, timedelta
 import time
+import spoca_hfc_classes
+import spoca_hfc_methods
+#from memory_profiler import profile
+#import ordereddict
 
+
+#psutil.phymem_usage()
+#cpu1        = psutil.cpu_percent(interval=0, percpu=True)
+#cpu1c       = psutil.cpu_count(logical=True)
+#mcpu1c      = multiprocessing.cpu_count()
+#vm1         = psutil.virtual_memory().percent
+#vm11        = psutil.virtual_memory()
+#vm11.total >> 20
+#swap_mem1   = psutil.swap_memory()
+#swap_mem1.total >> 20
+#disk_usage1 = psutil.disk_usage('/')
 # Import spoca hfc global variables
 
 from spoca_hfc_globals import VERSION, LOG, TODAY, \
@@ -50,6 +67,11 @@ LAUNCH_TIME = time.time()
 ENDTIME = TODAY.strftime(INPUT_TFORMAT)
 STARTTIME = (TODAY - timedelta(days=31)).strftime(INPUT_TFORMAT)
 
+
+# Memory profiling stored in logfile
+#os.remove('memory_profiler.log')
+#fp=open('memory_profiler.log','w')
+#@profile(stream=fp)
 
 # Module to setup spoca_hfc
 def setup_spoca_hfc(config_file, starttime, endtime,
@@ -108,7 +130,7 @@ def setup_spoca_hfc(config_file, starttime, endtime,
              spoca_job.class_config)
     LOG.info("SPoCA classification executable --> %s", spoca_job.class_exe)
     LOG.info("SPoCA get map config. file --> %s", spoca_job.getmap_config)
-    LOG.info("SPoCA get map executable --> %s", spoca_job.getmap_exe)
+    LOG.info("SPoCA get map executable --> %s", spoca_job.getmap_exe)    
     LOG.info("Output_directory --> %s", output_directory)
     LOG.info("Data_directory --> %s", data_directory)
     if (centers_file):
@@ -179,6 +201,7 @@ def setup_spoca_hfc(config_file, starttime, endtime,
 
 
 # Main script
+
 if (__name__ == "__main__"):
 
     # Get the arguments
@@ -211,7 +234,7 @@ if (__name__ == "__main__"):
         default=DATA_DIRECTORY,
         help='Data directory path [' + DATA_DIRECTORY + ']')
     parser.add_argument(
-        '-t', '--temp_dir', nargs='?',
+        '-td', '--temp_dir', nargs='?',
         default=BATCH_DIRECTORY,
         help='Temporary batch directory path [' + BATCH_DIRECTORY + ']')
     parser.add_argument(
@@ -253,11 +276,9 @@ if (__name__ == "__main__"):
         '-L', '--Local', action='store_true',
         help='Get local data files (AIA only)')
     args = parser.parse_args()
-
     config_file = args.config_file[0]
     output_directory = os.path.abspath(args.output_dir)
     data_directory = os.path.abspath(args.data_dir)
-    batch_directory = os.path.abspath(args.temp_dir)
     starttime = datetime.strptime(args.starttime, INPUT_TFORMAT)
     endtime = datetime.strptime(args.endtime, INPUT_TFORMAT)
     cadence = args.cadence
@@ -268,7 +289,6 @@ if (__name__ == "__main__"):
     write_qlk = args.Quicklook
     clean_data = args.Clean_data
     clean_map = args.Clean_map
-    clean_batch = args.Clean_batch
     clean_prep = args.Clean_prep
     verbose = args.Verbose
     overwrite = args.Overwrite
@@ -313,6 +333,7 @@ if (__name__ == "__main__"):
     # Setup spoca hfc jobs
     LOG.info("Building spoca_hfc job(s)...")
     ttop = time.time()
+    batch_directory = ""
     spoca_jobs = setup_spoca_hfc(
         config_file, starttime, endtime,
         cadence=cadence,
@@ -378,7 +399,6 @@ if (__name__ == "__main__"):
                 running[i].clean(
                     data=clean_data,
                     prep=clean_prep,
-                    batch=clean_batch,
                     map=clean_map)
                 running.remove(running[i])
 
@@ -391,3 +411,24 @@ if (__name__ == "__main__"):
 
     LOG.info("Total elapsed time: %f minutes",
              (time.time() - LAUNCH_TIME) / 60.0)
+
+
+#cpu2        = psutil.cpu_percent(interval=0, percpu=True)
+#cpu2c       = psutil.cpu_count(logical=True)
+#mcpu2c      = multiprocessing.cpu_count()
+#vm2         = psutil.virtual_memory().percent
+#vm22        = psutil.virtual_memory()
+#vm22.total>>20
+#swap_mem2   = psutil.swap_memory()
+#swap_mem2.total>>20
+#disk_usage2 = psutil.disk_usage('/')
+
+#print('cpu_count 1 and 2 :',cpu1c,cpu2c)
+#print('cpu_percent 1 and 2  :', cpu1,cpu2)
+#print('mcpu 1 and 2 :', mcpu1c, mcpu2c)
+#print('psutil.virtual_memory().percent  1 and 2 :',vm1,vm2)
+#print('psutil.virtual_memory()  1 and 2 :',vm11,vm22)
+#print('swap_memory 1 and 2 :', swap_mem1,swap_mem2)
+#print('disk_usage 1 and 2 :', disk_usage1,disk_usage2)
+#h = hpy()
+#print h.heap()

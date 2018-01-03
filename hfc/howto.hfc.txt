@@ -21,12 +21,7 @@
  (see install.txt), and that paths and environmment variables are correctly
  defined. 
 
- Especially, for slurm scripts you must define input options to provide
- to the cluster/grid (e.g., Time of computation, Memory required, etc)
- in the header of the file. See http://dio.obspm.fr/Calcul/tycho/ for 
- more explanations about job submission (in french).
+ scripts/setup-daily-spoca.sh => main script to launch SPOCA code in the HFC
+ scripts/spoca_hfc_env_setup.ias.sh => script to define environmment variables and to activate PYTHON virtual env
+ config/HFC_AIA_AR.classification.ias.config => path to SpoCa executable and config files, parameters to be used within the SPoca code
 
- To run a bash script, enter : bash name_of_the_script.sh
- To run a slurm script, enter: qsub name_of_the_script.slurm
-
- To see the status of the job, enter: squeue 
