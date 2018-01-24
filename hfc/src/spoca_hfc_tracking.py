@@ -10,6 +10,9 @@ import argparse
 import glob
 from datetime import datetime, timedelta
 import time
+import ftplib
+import numpy as np
+from math import sqrt
 
 try:
     from spoca_hfc_globals import *
@@ -25,8 +28,8 @@ except:
 # Import methods for spoca hfc
 try:
     from spoca_hfc_methods import setup_logging, parse_configfile, \
-                                write_csv, output_date, ordered_dict, \
-                                check_history, update_history
+                                write_csv, read_csv, output_date, ordered_dict, \
+                                check_history, update_history, download_file
 except:
     sys.exit("Import failed in module spoca_hfc_tracking :\n\tspoca_hfc_methods module is required!")
 
@@ -42,7 +45,7 @@ CONTACT = "xavier.bonnin@obspm.fr"
 REFERENCE = "doi:10.1051/0004-6361/200811416"
 
 # SPOCA version
-VERSION = 2.00
+VERSION = 3.01
 
 # Hostname
 HOSTNAME = socket.gethostname()
@@ -116,6 +119,171 @@ def setup_spoca_hfc(configfile,
 	
 	return tracking_instance
 
+# make a local copy of existing track file for a given fileset of armaps.fits
+def get_trackfile(fileset, codeName, observatoryName, trackFileDir, targetDir):
+
+    """
+    Copy track files corresponding to the given
+    fileset into the target directory.
+    """
+
+    LOG.info("Building list of previous track files...")
+
+    if not (os.path.isdir(targetDir)):
+        LOG.error("%s does not exist!", targetDir)
+        return []
+    
+    if "spoca-ar" in codeName:
+        trackFileDir = trackFileDir + "/spoca-ar/results"
+    elif "spoca-ch" in codeName:
+        trackFileDir = trackFileDir + "/spoca-ch/results"
+
+    # get years list from filename of fileset
+    yearList = []
+    for curr_maps in fileset:
+        curDate = os.path.basename(curr_maps).split("_")[2]
+        curYear = curDate[:4]
+        if curYear not in yearList:
+            yearList.append(curYear)
+            
+    # for each year retrieve existing track.csv files  
+    ftp_server = trackFileDir.split("/")[2]
+    trckFileList = []
+    for year in yearList:
+        ftp_dir = "/".join(trackFileDir.split("/")[3:])
+        ftp_dir = ftp_dir + "/" + year
+        print(ftp_dir)
+        ftp = ftplib.FTP(ftp_server)
+        ftp.login()
+        ftp.cwd(ftp_dir)
+        current_fileList = []
+        #ftp.dir(current_fileList.append);
+        ftp.retrlines('LIST *track.csv', current_fileList.append)
+        ftp.quit()
+        trckFileList.extend(["ftp://" + ftp_server + "/" + ftp_dir + "/" +
+                                current_file.split()[-1]
+                                for current_file in current_fileList])
+                                
+    # download previous csv track files    
+    trackset = []
+    for curr_maps in fileset:
+        curDate = os.path.basename(curr_maps).split("_")[2]
+        ftpDir = trackFileDir + "/" + curDate[:4]
+	curTrackFileName="_".join([codeName, curDate,observatoryName,"track.csv"])
+	curTrackFullPath = os.path.join(ftpDir,curTrackFileName)
+        if curTrackFullPath in trckFileList:
+            if ((curTrackFullPath.startswith("ftp")) or
+                (curTrackFullPath.startwidth("http"))):
+                target = download_file(
+                curTrackFullPath,
+                data_directory=targetDir,
+                filename=os.path.basename(curTrackFullPath))        
+                if (os.path.isfile(target)):
+                    trackset.append(target)
+        else:
+            if (os.path.isfile(curTrackFullPath)):
+                if (targetDir != os.path.dirname(curTrackFullPath)):
+                    shutil.copy(curTrackFullPath, targetDir)
+                trackset.append(target)       
+
+    return trackset
+
+# get previous track data from CSV files
+def get_prev_trackdata(startDate, endDate, codeName, observatoryName, trackFileDir):
+
+    """
+    Return a list with tracking data between startDate and endDate
+    """    
+    
+    if "spoca-ar" in codeName:
+        trackFileDir = trackFileDir + "/spoca-ar/results"
+    elif "spoca-ch" in codeName:
+        trackFileDir = trackFileDir + "/spoca-ch/results"
+
+    # get years list from filename of fileset
+    startYear = startDate.year
+    endYear = endDate.year
+    yearList = []
+    for i in range(startYear, endYear+1):
+        yearList.append(i)
+       
+    # for each year retrieve existing track.csv files  
+    ftp_server = trackFileDir.split("/")[2]
+    trckFileList = []
+    for year in yearList:
+        ftp_dir = "/".join(trackFileDir.split("/")[3:])
+        ftp_dir = ftp_dir + "/" + str(year)
+        print(ftp_dir)
+        ftp = ftplib.FTP(ftp_server)
+        ftp.login()
+        ftp.cwd(ftp_dir)
+        current_fileList = []
+        #ftp.dir(current_fileList.append);
+        ftp.retrlines('LIST *track.csv', current_fileList.append)
+        ftp.quit()
+        trckFileList.extend(["ftp://" + ftp_server + "/" + ftp_dir + "/" +
+                                current_file.split()[-1]
+                                for current_file in current_fileList])
+                                
+    # load previous tracking data from csv track files 
+    prevTrackingData = []
+    for trackFileName in trckFileList:
+        tmp = os.path.basename(trackFileName).split("_")[2]
+        trckDate = datetime.strptime(tmp,'%Y%m%dT%H%M%S')
+        if trckDate > startDate and trckDate < endDate:
+            curData = read_csv(trackFileName)
+            if (curData is None):
+                 continue
+            for td in curData:
+                prevTrackingData.append(
+                    {"DATE_OBS": td['DATE_OBS'],
+                    "FEAT_X_PIX": td['FEAT_X_PIX'],
+                    "FEAT_Y_PIX": td['FEAT_Y_PIX'],
+                    "TRACK_ID":td['TRACK_ID'],
+                    "TRACK_FILENAME":td['TRACK_FILENAME']})  
+
+    return prevTrackingData
+
+def load_trackid(trackset, feat_data):
+
+    """
+    Load track ids from list of
+    track files, updating if
+    feature matching occurs.
+    """
+
+    tdset = []
+    tid = []
+    for current_file in trackset:
+        current_data = read_csv(current_file)
+        if (current_data is None):
+            continue
+        for td in current_data:
+            tdset.append([datetime.strptime(td['DATE_OBS'], INPUT_TFORMAT),
+                          int(td['FEAT_X_PIX']),
+                          int(td['FEAT_Y_PIX'])])
+            tid.append(np.int64(td['TRACK_ID']))
+    if (len(tid) == 0):
+        return []
+    max_tid = np.max(tid)
+
+    track_id = []
+    count = 1
+    for i, curFeat in enumerate(feat_data):
+    #for i, current_date in enumerate(feat_data['DATE_OBS']):
+        current_set = [
+            curFeat['DATE_OBS'],
+            curFeat['FEAT_X_PIX'],
+            curFeat['FEAT_Y_PIX']]
+
+        if (current_set in tdset):
+            index = tdset.index(current_set)
+            track_id.append(tid[index])
+        else:
+            track_id.append(max_tid + count)
+            count += 1
+
+    return track_id
 
 # Main script 
 if __name__ == "__main__":  
@@ -170,11 +338,12 @@ if __name__ == "__main__":
     log = logging.getLogger(LOGGER)
     log.info("Starting spoca_hfc_tracking.py on "+HOSTNAME+" ("+TODAY.strftime(HFC_TFORMAT)+")")
 
-    # Check map directory existence
-    if not (os.path.isdir(map_directory)):
-	log.warning("%s does not exist!", map_directory)
-	log.warning("use %s as a map directory",output_directory)
-	map_directory = output_directory
+    # Check map directory existence if local
+    if not (map_directory.startswith("ftp")):
+        if not (os.path.isdir(map_directory)):
+	    log.warning("%s does not exist!", map_directory)
+	    log.warning("use %s as a map directory",output_directory)
+	    map_directory = output_directory
 
     # Check output directory existence
     if not (os.path.isdir(output_directory)):
@@ -207,7 +376,23 @@ if __name__ == "__main__":
         sys.exit()
     else:
 	log.info("%i map files found",nmap)
-
+        
+    # loading previous tracking data
+    codeName = "_".join([spoca_job.code.lower(),"".join(str(VERSION).split("."))])
+    prevTrackData = get_prev_trackdata(starttime, endtime, codeName, spoca_job.observatory.lower(), map_directory)
+    if len(prevTrackData) == 0:
+        log.warning("No previous tracking data between %s and %s", starttime, endtime)
+    else:
+        log.warning("%s previous tracking data have been loaded", len(prevTrackData))
+        
+    # this array will be used as an history of newly track_id and maaping between old id and new ones
+    oldId = []
+    newId = []
+    for data in prevTrackData:
+        oldId.append(int(data["TRACK_ID"]))
+        newId.append(int(data["TRACK_ID"]))
+    trckIdHistory = {"ori":oldId, "new":newId}
+    
     # If history file doesn't exist, create it
     if (history_file is None):
 	history_file = os.path.join(output_directory,
@@ -223,9 +408,8 @@ if __name__ == "__main__":
 	else:
 	    log.error("Tracking has failed, please check!")
             sys.exit(1)
-        
-        # Extract tracking data from map file and write output csv file
-	
+                
+        # Extract tracking data from map file and write output csv file	
 	log.info("Extracting tracking data from updated maps...")
 	for current_map in current_set:
 	    current_date = os.path.basename(current_map).split("_")[2]
@@ -248,7 +432,52 @@ if __name__ == "__main__":
 	    else:
 		log.info("%s processed",current_map)
 
-	    fieldnames = current_track_data[0].order()
+            # try to connect to previous track_id
+            for i, curTrackData in enumerate(current_track_data):
+                #first check if this track_id have already matched with an old one
+                if curTrackData['TRACK_ID'] in trckIdHistory['ori']:
+                    index = trckIdHistory['ori'].index(curTrackData['TRACK_ID'])
+                    current_track_data[i]['TRACK_ID'] = trckIdHistory['new'][index]
+                    log.info("%s already associated with previous track id %s", trckIdHistory['ori'][index], trckIdHistory['new'][index])
+                    continue
+                    
+                curDate = datetime.strptime(curTrackData['DATE_OBS'],INPUT_TFORMAT)
+                curX = curTrackData['FEAT_X_PIX']
+                curY = curTrackData['FEAT_Y_PIX']
+                minDist = 5000
+                possibleMatch = None
+                for prevtrckData in prevTrackData:
+                    prevDate = datetime.strptime(prevtrckData['DATE_OBS'],INPUT_TFORMAT)                    
+                    if (curDate - timedelta(days=2)) < prevDate:
+                        prevX = int(prevtrckData['FEAT_X_PIX'])
+                        prevY = int(prevtrckData['FEAT_Y_PIX'])
+                        dist = sqrt((curX-prevX)**2 + (curY-prevY)**2)
+                        if (dist == 0):
+                            #log.info("%s match with track_id %s", curTrackData['TRACK_ID'],prevtrckData['TRACK_ID'])
+                            possibleMatch = {"id": curTrackData['TRACK_ID'], "x":curX, "y":curY, "prev_id":prevtrckData['TRACK_ID'], "prev_x":prevX, "prev_y":prevY, "dist":dist}                            
+                            break
+                        if dist < 500 and dist < minDist:
+                            #log.info("%s could match with track_id %s with a distance of %s", curTrackData['TRACK_ID'],prevtrckData['TRACK_ID'], dist)
+                            #log.info("%s %s  %s %s", curX,prevX, curY, prevY)
+                            minDist = dist
+                            possibleMatch = {"id": curTrackData['TRACK_ID'], "x":curX, "y":curY, "prev_id":prevtrckData['TRACK_ID'], "prev_x":prevX, "prev_y":prevY, "dist":dist}
+                
+                # add a new id or create a new one if not match found
+                print(possibleMatch)
+                if possibleMatch is None:
+                    newId = max(trckIdHistory['new']) + 1
+                    trckIdHistory['ori'].append(curTrackData['TRACK_ID'])
+                    trckIdHistory['new'].append(newId)
+                    log.info("New track_id %s created for id %s", newId , curTrackData['TRACK_ID'])
+                    current_track_data[i]['TRACK_ID'] = newId                    
+                else:
+                    log.info("%s matches with %s", curTrackData['TRACK_ID'] , possibleMatch["prev_id"])
+                    if (curTrackData['TRACK_ID'] not in trckIdHistory['ori']): 
+                        trckIdHistory['ori'].append(curTrackData['TRACK_ID'])
+                        trckIdHistory['new'].append(int(possibleMatch["prev_id"]))
+                    current_track_data[i]['TRACK_ID'] = int(possibleMatch["prev_id"])              
+	    
+            fieldnames = current_track_data[0].order()
 	    if (write_csv(current_track_data,current_output_file,fieldnames=fieldnames)):
 		log.info(current_output_file+" saved")
                 if os.path.basename(current_map) not in processed_maps:

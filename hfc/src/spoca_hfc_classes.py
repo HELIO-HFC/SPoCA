@@ -985,11 +985,13 @@ class tracking():
         data_directory = self.data_directory
 
         if (map_type == "A"):
-            url = FTP_URL + "/spoca-ar"
+            #url = FTP_URL + "/spoca-ar"
             #map_type = "ARMap"
+            url = data_directory + "/spoca-ar/results"
             map_type = "armap"
         elif (map_type == "C"):
-            url = FTP_URL + "/spoca-ch"
+            #url = FTP_URL + "/spoca-ch"
+            url = data_directory + "/spoca-ch/results"
             map_type = "CHMap"
 
         # Years to cover
@@ -1002,9 +1004,9 @@ class tracking():
         fileList = []
         if (download_maps):
             ftp_server = url.split("/")[2]
-            for current_year in yearList:
+            for current_year in yearList:              
                 ftp_dir = "/".join(url.split("/")[3:])
-                ftp_dir += "/" + str(current_year) + "/maps"
+                ftp_dir += "/" + str(current_year) + "/maps"                
                 ftp = ftplib.FTP(ftp_server)
                 ftp.login()
                 ftp.cwd(ftp_dir)
@@ -1046,7 +1048,7 @@ class tracking():
 
         spoca_bin = self.args['CLASS_EXE']
         spoca_bin_config = self.args['CLASS_CONFIG']
-        data_directory = self.data_directory
+        output_dir = self.output_directory
 
         # Check that map files exist
         count = 0
@@ -1058,7 +1060,7 @@ class tracking():
                 LOG.info("Downloading %s...", current_map)
                 current_map = download_file(
                     current_map,
-                    data_directory=data_directory,
+                    data_directory=output_dir,
                     filename=os.path.basename(current_map))
             if not os.path.isfile(current_map):
                 LOG.error("%s does not exist, please check!", current_map)
@@ -1075,7 +1077,7 @@ class tracking():
         spoca_cmd = [spoca_bin] + spoca_args[:]
         #args_part = " ".join(spoca_args)
         #spoca_cmd = spoca_bin + " " + args_part
-        LOG.debug("Running --> " + " ".join(spoca_cmd) + "...")
+        LOG.info("Running --> " + " ".join(spoca_cmd) + "...")
         spoca_process = subprocess.Popen(spoca_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
         output, errors = spoca_process.communicate()
         if (spoca_process.wait() == 0):
