@@ -194,37 +194,40 @@ def get_prev_trackdata(startDate, endDate, codeName, observatoryName, trackFileD
     """
     Return a list with tracking data between startDate and endDate
     """    
-    
-    if "spoca-ar" in codeName:
-        trackFileDir = trackFileDir + "/spoca-ar/results"
-    elif "spoca-ch" in codeName:
-        trackFileDir = trackFileDir + "/spoca-ch/results"
-
-    # get years list from filename of fileset
-    startYear = startDate.year
-    endYear = endDate.year
-    yearList = []
-    for i in range(startYear, endYear+1):
-        yearList.append(i)
-       
-    # for each year retrieve existing track.csv files  
-    ftp_server = trackFileDir.split("/")[2]
     trckFileList = []
-    for year in yearList:
-        ftp_dir = "/".join(trackFileDir.split("/")[3:])
-        ftp_dir = ftp_dir + "/" + str(year)
-        print(ftp_dir)
-        ftp = ftplib.FTP(ftp_server)
-        ftp.login()
-        ftp.cwd(ftp_dir)
-        current_fileList = []
-        #ftp.dir(current_fileList.append);
-        ftp.retrlines('LIST *track.csv', current_fileList.append)
-        ftp.quit()
-        trckFileList.extend(["ftp://" + ftp_server + "/" + ftp_dir + "/" +
+    if trackFileDir.startswith('ftp'):
+        if "spoca-ar" in codeName:
+            trackFileDir = trackFileDir + "/spoca-ar/results"
+        elif "spoca-ch" in codeName:
+            trackFileDir = trackFileDir + "/spoca-ch/results"
+
+        # get years list from filename of fileset
+        startYear = startDate.year
+        endYear = endDate.year
+        yearList = []
+        for i in range(startYear, endYear+1):
+            yearList.append(i)
+       
+        # for each year retrieve existing track.csv files  
+        ftp_server = trackFileDir.split("/")[2]
+        for year in yearList:
+            ftp_dir = "/".join(trackFileDir.split("/")[3:])
+            ftp_dir = ftp_dir + "/" + str(year)
+            print(ftp_dir)
+            ftp = ftplib.FTP(ftp_server)
+            ftp.login()
+            ftp.cwd(ftp_dir)
+            current_fileList = []
+            #ftp.dir(current_fileList.append);
+            ftp.retrlines('LIST *track.csv', current_fileList.append)
+            ftp.quit()
+            trckFileList.extend(["ftp://" + ftp_server + "/" + ftp_dir + "/" +
                                 current_file.split()[-1]
                                 for current_file in current_fileList])
-                                
+    else:
+        trckFileList = glob.glob(trackFileDir + "/*track.csv")
+        #trckFileList = glob.glob(os.path.join(trackFileDir, "/*track.csv"))
+            
     # load previous tracking data from csv track files 
     prevTrackingData = []
     for trackFileName in trckFileList:
