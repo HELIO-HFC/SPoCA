@@ -1056,12 +1056,14 @@ class tracking():
 
             # If the map is on a distant ftp server
             # then download it
-            if (current_map.startswith("ftp://")):
+            if (current_map.startswith("ftp://") and not os.path.isfile(output_dir+'/'+os.path.basename(current_map))):
                 LOG.info("Downloading %s...", current_map)
                 current_map = download_file(
                     current_map,
                     data_directory=output_dir,
                     filename=os.path.basename(current_map))
+            else:
+                current_map = output_dir+'/'+os.path.basename(current_map)
             if not os.path.isfile(current_map):
                 LOG.error("%s does not exist, please check!", current_map)
             else:
