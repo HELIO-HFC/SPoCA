@@ -11,3 +11,13 @@ python preview_frc.py ftp://ftpbass2000.obspm.fr/pub/helio/spoca-ar/2000/spoca-a
 python preview_frc.py ftp://ftpbass2000.obspm.fr/pub/helio/spoca-ar/1997/spoca-ar_20_19971203T130014_soho_init.csv ftp://ftpbass2000.obspm.fr/pub/helio/spoca-ar/1997/spoca-ar_20_19971203T130014_soho_feat.csv -i ftp://ftpbass2000.obspm.fr/temp/qlk/soho/eit/1997/efz19971203.130014.png
 
 python preview_frc.py ftp://ftpbass2000.obspm.fr/pub/helio/spoca-ar/2011/spoca-ar_20_20110508T160000_sdo_init.csv ftp://ftpbass2000.obspm.fr/pub/helio/spoca-ar/2011/spoca-ar_20_20110508T160000_sdo_feat.csv -i ftp://ftpbass2000.obspm.fr/temp/qlk/sdo/aia/2011/aia.lev1.193A_2011-05-08T16%3A59%3A55.84Z.image_lev1.png
+
+# version IAS
+python frc_preview.py ftp://ftpbass2000.obspm.fr/pub/helio/hfc/obsparis/frc/spoca-ar/results/2016/spoca-ar_301_20161219T220022_sdo_init.csv -f ftp://ftpbass2000.obspm.fr/pub/helio/hfc/obsparis/frc/spoca-ar/results/2016/spoca-ar_301_20161219T220022_sdo_feat.csv -i ftp://ftpbass2000.obspm.fr/pub/helio/hfc/obsparis/frc/spoca-ar/images/full/sdo/aia/2016/aia.lev1.171A_2016-12-19T22:00:22.34Z.image_lev1.jpg
+
+python frc_preview.py ftp://ftpbass2000.obspm.fr/pub/helio/hfc/obsparis/frc/spoca-ar/results/2016/spoca-ar_301_20161219T220022_sdo_init.csv -f ftp://ftpbass2000.obspm.fr/pub/helio/hfc/obsparis/frc/spoca-ar/results/2016/spoca-ar_301_20161219T220022_sdo_feat.csv -i ftp://ftpbass2000.obspm.fr/pub/helio/hfc/obsparis/frc/spoca-ar/images/full/sdo/aia/2016/aia.lev1.193A_2016-12-19T22:00:29.84Z.image_lev1.jpg
+
+python frc_preview.py ftp://ftpbass2000.obspm.fr/pub/helio/hfc/obsparis/frc/sosoft/results/2014/SoSoFT_10_20140118T120056_meu2_obs.csv -f ftp://ftpbass2000.obspm.fr/pub/helio/hfc/obsparis/frc/sosoft/results/2014/SoSoFT_10_20140118T120056_meu2_feat.csv -i ftp://ftpbass2000.obspm.fr/pub/helio/hfc/obsparis/frc/sosoft/images/full/meudon/Halpha/2014/mh140118.120056_subtract_processed.png
+
+
+

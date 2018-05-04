@@ -40,7 +40,7 @@ def image2chain(image,pixel_value,
     ccdir = np.array([0,7,6,5,4,3,2,1])
     
     if (image.ndim != 2):
-        print "Error: input array must have 2 dimensions!"
+        print ("Error: input array must have 2 dimensions!")
         return "",[]
 
     nX = image.shape[0] ; nY = image.shape[1]
@@ -77,7 +77,7 @@ def image2chain(image,pixel_value,
         ardir = np.roll(ardir,7-ishift,axis=0) ; ccdir = np.roll(ccdir,7-ishift)
         niter+=1
         if (niter > n): 
-            if (VERBOSE): print "Error: can not compute chain code!"
+            if (VERBOSE): print ("Error: can not compute chain code!")
             return "",[]
     
     return chaincode, locations

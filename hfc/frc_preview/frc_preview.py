@@ -16,31 +16,53 @@ __maintainer2__="Ymane TAOUFIQ"
 
 import os, sys, io
 import argparse, csv
-import cStringIO
-import urllib2
+#import cStringIO
+from io import StringIO
+#import urllib2
+from urllib.request import urlopen
 from PIL import Image
 from scipy.misc import fromimage, toimage
 import matplotlib.pyplot as plt
 import numpy as np
 from pycurl import pycurl
 from improlib import chain2image, auto_contrast
+from tkinter import filedialog
 
 ftp2csv="ftp://ftpbass2000.obspm.fr/pub/helio"
-ftp2qlk="ftp://ftpbass2000.obspm.fr/temp/qlk/"
+ftp2qlk="ftp://ftpbass2000.obspm.fr/pub/helio"
 
+def makeFileSet(obsFile):
+    """ Build a complete CSV fileset from an observation CSV filename """
+    filePath = os.path.dirname(obsFile)
+    fileName = os.path.basename(obsFile)
+    
+    if fileName.startswith('spoca-ar') or fileName.startswith('sdoss'):
+        items=fileName.split("_")
+        code=items[0].lower() ; version=items[1] ; cdate=items[2]
+        observat=items[3].lower() ; fileType=items[4].lower()
+        fileSet = [fileName, fileName.replace('init', 'feat'),
+                    fileName.replace('init', 'track'),
+                    "_".join([code,version,observat,"observatory"])+".csv",
+                    "_".join([code,version,observat,"frc_info"])+".csv"]
+    elif fileName.startswith('SoSoFT') or fileName.startswith('SoSoPro'):
+        fileSet = [fileName, fileName.replace('obs', 'feat'),
+        fileName.replace('obs', 'pp'),
+        fileName.replace('obs', 'frc')]
+    else:
+        fileSet = None
 
-
-
+    return fileSet
+    
 def read_csv(file):
 
     if (file.startswith("http:")) or \
         (file.startswith("ftp:")):
         output, error = pycurl(file,"-qO")
         if (len(output) == 0): return []
-        buff = cStringIO.StringIO(output)
+        buff = io.StringIO(output)
     else:
         if not (os.path.isfile(file)):
-            print file+" does not exists!"
+            print (file+" does not exists!")
             return []
         buff = open(file,'rb')
         
@@ -58,14 +80,14 @@ def load_image(file):
     if (file.startswith("http:")) or \
         (file.startswith("ftp:")):
         try:
-            buff = urllib2.urlopen(file).read()
+            buff = urlopen(file).read()
             file = cStringIO.StringIO(buff)
         except:
-            print "Can not load %s!" % file
+            print ("Can not load %s!" % file)
             return None
     else:
         if not (os.path.isfile(file)):
-            print file+" does not exists!"
+            print (file+" does not exists!")
             return None
     image = Image.open(file)
     return image
@@ -84,7 +106,7 @@ def plot_feat(init_file,
     observat=items[3].lower() ; fileType=items[4].lower()
     init_data = read_csv(init_file)
     if not (init_data):
-        print "Error reading %s!" % init_file
+        print ("Error reading %s!" % init_file)
         return False
 
     data_dir = os.path.dirname(init_file)
@@ -103,19 +125,19 @@ def plot_feat(init_file,
     qclk_fname = os.path.basename(init_data[0]['QCLK_FNAME'])
 
     if (GET_QUICKLOOK) and not (image_file):
-        print "Reading quicklook url from %s" % init_file
+        print ("Reading quicklook url from %s" % init_file)
         if not (qclk_fname):
-            print "QCLK_FNAME keyword is not provided in %s!" % init_file
+            print ("QCLK_FNAME keyword is not provided in %s!" % init_file)
         else:
             if not (qclk_url) or (qclk_url.upper() == 'NULL'):
-                print "QCLK_URL keyword is not provided in %s!" % init_file
+                print ("QCLK_URL keyword is not provided in %s!" % init_file)
                 image_file = os.path.join(data_dir,qclk_fname)
                 if (os.path.isfile(image_file)):
-                    print "%s found in %s" % (qclk_fname,data_dir)
+                    print ("%s found in %s" % (qclk_fname,data_dir))
                 else:
                     year=date_obs.split("-")[0]
                     observatory_file=ftp2csv+"/"+code+"/"+year+"/"+"_".join([code,version,observat,"observatory"])+".csv"
-                    print "Trying to reach %s" % observatory_file
+                    print ("Trying to reach %s" % observatory_file)
                     oby_data=read_csv(observatory_file)
                     if (oby_data):
                         observatory=oby_data[0]['OBSERVAT'].lower()
@@ -126,30 +148,30 @@ def plot_feat(init_file,
                 image_file =  qclk_url + "/" + qclk_fname
 
     if (VERBOSE):
-        print "NAXIS1 = %s" % naxis1
-        print "NAXIS2 = %s" % naxis2
-        print "CDELT1 = %s" % cdelt1
-        print "CDELT2 = %s" % cdelt2
-        print "FILENAME = %s" % filename
-        print "URL = %s" % url
-        print "QCLK_URL = %s" % qclk_url
-        print "QCLK_FNAME = %s" % qclk_fname
+        print ("NAXIS1 = %s" % naxis1)
+        print ("NAXIS2 = %s" % naxis2)
+        print ("CDELT1 = %s" % cdelt1)
+        print ("CDELT2 = %s" % cdelt2)
+        print ("FILENAME = %s" % filename)
+        print ("URL = %s" % url)
+        print ("QCLK_URL = %s" % qclk_url)
+        print ("QCLK_FNAME = %s" % qclk_fname)
 
     # Loading feature data
     if (feat_file is None):
         feat_file = init_file.replace("_init.csv","_feat.csv")
     feat_data = read_csv(feat_file)
     if not (feat_data):
-        print "Error reading %s!" % feat_file
+        print ("Error reading %s!" % feat_file)
         return False   
 
     if (VERBOSE):
-        print "Number of features = %i" % len(feat_data)
+        print ("Number of features = %i" % len(feat_data))
 
     if (track_file):
         track_data = read_csv(track_file)
         if not (track_data):
-            print "Error reading %s!" % track_file
+            print ("Error reading %s!" % track_file)
             return False
 
     plt.figure(figsize=(8,8))
@@ -203,8 +225,8 @@ def plot_feat(init_file,
 
 if (__name__ == "__main__"):
     parser = argparse.ArgumentParser(add_help=True)
-    parser.add_argument('init_file',nargs=1,
-                        help="Observation data file")
+    parser.add_argument('-o', '--init_file',nargs='?',
+                        default=None,help="Observation data file")
     parser.add_argument('-f','--feat_file',nargs='?',
                         default=None,help="Feature data file")
     parser.add_argument('-t','--track_file',nargs='?',
@@ -219,7 +241,7 @@ if (__name__ == "__main__"):
                         help="Talkative mode")    
     args = parser.parse_args()
 
-    init_file = args.init_file[0]
+    init_file = args.init_file
     feat_file = args.feat_file
     track_file = args.track_file
     image_file = args.image_file
@@ -227,9 +249,17 @@ if (__name__ == "__main__"):
     QUICKLOOK=args.Quicklook
     VERBOSE=args.Verbose
 
-    plot_feat(init_file,feat_file=feat_file,track_file=track_file,
-              image_file=image_file,PIXELS=PIXELS,
-              GET_QUICKLOOK=QUICKLOOK,VERBOSE=VERBOSE)
+    # ask for an observation CSV file if not in input parameters
+    if init_file is None:
+        init_file =  filedialog.askopenfilename(initialdir = ".",title = "Select a CSV observation file")
+        fileSet = makeFileSet(init_file)
+        if fileSet is None:
+            print ("No filesetfound for %s!" % init_file)
+        else:
+            print(fileSet)
+#    plot_feat(init_file,feat_file=feat_file,track_file=track_file,
+#              image_file=image_file,PIXELS=PIXELS,
+ #             GET_QUICKLOOK=QUICKLOOK,VERBOSE=VERBOSE)
         
     
 
