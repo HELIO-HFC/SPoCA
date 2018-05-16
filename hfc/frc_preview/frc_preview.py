@@ -45,12 +45,17 @@ def makeFileSet(obsFile):
                     "_".join([code,version,observat,"observatory"])+".csv",
                     "_".join([code,version,observat,"frc_info"])+".csv"]
     elif fileName.startswith('SoSoFT') or fileName.startswith('SoSoPro'):
-        fileSet = [fileName, fileName.replace('obs', 'feat'),
-        fileName.replace('obs', 'pp'),
+        fileSet = [fileName, fileName.replace('obs', 'pp'),
+        fileName.replace('obs', 'feat'),        
         fileName.replace('obs', 'frc')]
     else:
         fileSet = None
-
+    
+    # add path to filename
+    if fileSet is not None:
+        for i in range (0, len(fileSet)):
+            fileSet[i] = os.path.join(filePath, fileSet[i])
+    
     return fileSet
     
 def read_csv(file):
@@ -64,7 +69,7 @@ def read_csv(file):
         if not (os.path.isfile(file)):
             print (file+" does not exists!")
             return []
-        buff = open(file,'rb')
+        buff = open(file,'r')
         
     reader = csv.DictReader(buff,delimiter=';')
     data = []
@@ -92,26 +97,37 @@ def load_image(file):
     image = Image.open(file)
     return image
 
-def plot_feat(init_file,
-              feat_file=None,
-              track_file=None,
+def plot_feat(fileSet,
               image_file=None,
               RSUN=True,
               PIXELS=False,
               GET_QUICKLOOK=False,
               VERBOSE=False):
 
+    if ('SoSoFT' in fileSet[0]) or ('SoSoPro' in fileSet[0]):
+        init_file, pp_file, feat_file, frc_file = fileSet
+        init_data = read_csv(pp_file)
+        obs_data = read_csv(init_file)
+        date_obs = obs_data[0]['DATE_OBS']
+        qclk_fname = init_data[0]['PR_LOCFNAME'].replace('fits', 'png')
+        
+    else:
+        init_file, feat_file, track_file, observatory_file, frc_file = fileSet
+        init_data = read_csv(init_file)
+        date_obs = init_data[0]['DATE_OBS']
+        
+        
     items=os.path.basename(init_file).split("_")
     code=items[0].lower() ; version=items[1] ; cdate=items[2]
     observat=items[3].lower() ; fileType=items[4].lower()
-    init_data = read_csv(init_file)
+#    init_data = read_csv(init_file)
     if not (init_data):
         print ("Error reading %s!" % init_file)
         return False
 
     data_dir = os.path.dirname(init_file)
 
-    date_obs = init_data[0]['DATE_OBS']
+#    date_obs = init_data[0]['DATE_OBS']
     naxis1 = int(init_data[0]['NAXIS1'])
     naxis2 = int(init_data[0]['NAXIS2'])
     cdelt1 = float(init_data[0]['CDELT1'])
@@ -119,10 +135,13 @@ def plot_feat(init_file,
     center_x = float(init_data[0]['CENTER_X'])
     center_y = float(init_data[0]['CENTER_Y'])
     rsun = float(init_data[0]['R_SUN'])
-    filename = init_data[0]['FILENAME']
-    url = init_data[0]['URL']
-    qclk_url = init_data[0]['QCLK_URL']
-    qclk_fname = os.path.basename(init_data[0]['QCLK_FNAME'])
+#    filename = init_data[0]['FILENAME']
+    if 'URL' in init_data[0]: url = init_data[0]['URL']
+    else: url = None
+    if 'QCLK_URL' in init_data[0]: qclk_url = init_data[0]['QCLK_URL']
+    else: qclk_url = None
+    if 'QCLK_FNAME' in init_data[0]: qclk_fname = os.path.basename(init_data[0]['QCLK_FNAME'])
+#    else: qclk_fname = None
 
     if (GET_QUICKLOOK) and not (image_file):
         print ("Reading quicklook url from %s" % init_file)
@@ -152,7 +171,7 @@ def plot_feat(init_file,
         print ("NAXIS2 = %s" % naxis2)
         print ("CDELT1 = %s" % cdelt1)
         print ("CDELT2 = %s" % cdelt2)
-        print ("FILENAME = %s" % filename)
+#        print ("FILENAME = %s" % filename)
         print ("URL = %s" % url)
         print ("QCLK_URL = %s" % qclk_url)
         print ("QCLK_FNAME = %s" % qclk_fname)
@@ -168,11 +187,11 @@ def plot_feat(init_file,
     if (VERBOSE):
         print ("Number of features = %i" % len(feat_data))
 
-    if (track_file):
-        track_data = read_csv(track_file)
-        if not (track_data):
-            print ("Error reading %s!" % track_file)
-            return False
+#    if (os.path.isfile(track_file)):
+#        track_data = read_csv(track_file)
+#        if not (track_data):
+#            print ("Error reading %s!" % track_file)
+#            return False
 
     plt.figure(figsize=(8,8))
 
@@ -186,8 +205,8 @@ def plot_feat(init_file,
     y=np.linspace(min(Y),max(Y),6)
     plt.xticks(x)
     plt.yticks(y)
-
-    if (image_file):
+ 
+    if (os.path.isfile(image_file)):
         buff=load_image(image_file)
         if (buff):
             image = fromimage(buff)
@@ -210,16 +229,24 @@ def plot_feat(init_file,
         plt.plot(xs,ys)
 
     for current_feat in feat_data:
-        cc = current_feat['CC']
-        cc_x_pix = np.int64(current_feat['CC_X_PIX'])
-        cc_y_pix = np.int64(current_feat['CC_Y_PIX'])
-        Xc,Yc = chain2image(cc,start_pixel=[cc_x_pix,cc_y_pix],
+        if 'BLOB_SEPARATOR' in current_feat:
+            cc = current_feat['CC'].split(current_feat['BLOB_SEPARATOR'])
+            cc_x_pix = current_feat['CC_X_PIX'].split(current_feat['BLOB_SEPARATOR'])
+            cc_y_pix = current_feat['CC_Y_PIX'].split(current_feat['BLOB_SEPARATOR'])
+        else:
+            cc = [current_feat['CC']]
+            cc_x_pix = [current_feat['CC_X_PIX']]
+            cc_y_pix = [current_feat['CC_Y_PIX']]
+        for j in range (len(cc)): 
+            cc_x = np.int64(cc_x_pix[j])
+            cc_y = np.int64(cc_y_pix[j])
+            Xc,Yc = chain2image(cc[j],start_pixel=[cc_x,cc_y],
                             CCLOCKWISE=True)
-        if not (PIXELS):
-            for i,Xi in enumerate(Xc):
-                Xc[i] = cdelt1*(Xc[i] - center_x)
-                Yc[i] = cdelt2*(Yc[i] - center_y)
-        plt.plot(Xc,Yc)
+            if not (PIXELS):
+                for i,Xi in enumerate(Xc):
+                    Xc[i] = cdelt1*(Xc[i] - center_x)
+                    Yc[i] = cdelt2*(Yc[i] - center_y)
+            plt.plot(Xc,Yc)
 
     plt.show()
 
@@ -253,13 +280,23 @@ if (__name__ == "__main__"):
     if init_file is None:
         init_file =  filedialog.askopenfilename(initialdir = ".",title = "Select a CSV observation file")
         fileSet = makeFileSet(init_file)
-        if fileSet is None:
+                
+        #    init_file, feat_file, track_file, observatory_file, frc_file = fileSet
+    else:
+        fileSet = [init_file, feat_file, track_file]
+        
+    if fileSet is None:
             print ("No filesetfound for %s!" % init_file)
-        else:
-            print(fileSet)
-#    plot_feat(init_file,feat_file=feat_file,track_file=track_file,
-#              image_file=image_file,PIXELS=PIXELS,
- #             GET_QUICKLOOK=QUICKLOOK,VERBOSE=VERBOSE)
+            exit()
+    else:
+        if VERBOSE: print("File Set is: ", fileSet)
+
+    plot_feat(fileSet,
+              image_file=image_file,PIXELS=PIXELS,
+             GET_QUICKLOOK=QUICKLOOK,VERBOSE=VERBOSE)
+    #plot_feat(init_file,feat_file=feat_file,track_file=track_file,
+    #          image_file=image_file,PIXELS=PIXELS,
+     #        GET_QUICKLOOK=QUICKLOOK,VERBOSE=VERBOSE)
         
     
 
