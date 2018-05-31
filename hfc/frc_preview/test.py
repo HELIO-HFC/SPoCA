@@ -16,6 +16,7 @@ import numpy as np
 from PIL import Image
 from scipy.misc import fromimage, toimage
 from improlib import chain2image, auto_contrast
+import urllib
 #from tkinter import tkFileDialog
 
 #import Tkinter as ttk
@@ -39,6 +40,12 @@ class App(tk.Tk):
     def launch_file_dialog_box(self):
         self.init_file = filedialog.askopenfilename()
         self.make_plot()
+        
+#    def create_window(self):
+#        t = tk.Toplevel(self)
+#        t.wm_title("Browse ftpbass2000")
+#        l = tk.Label(t, text="Browse ftpbass2000")
+#        l.pack(side="top", fill="both", expand=True, padx=100, pady=100)
     
     def browse_ftpbass2000(self):
         self.ftpFileList.pack()
@@ -55,12 +62,17 @@ class App(tk.Tk):
             select=self.ftpFileList.get(self.ftpFileList.curselection())
         else:
             select = "pub/helio/"
-
+        
+        if select == 'BACK':
+            reps = self.curFTPDir.split('/')
+            select = '/'.join(reps[0:len(reps)-1])
         try:
             ftp.cwd(select)
             self.ftpFileList.delete(0, END)
+            self.ftpFileList.insert(0, 'BACK')
             for fileName in ftp.nlst():
                 self.ftpFileList.insert(END, select+'/'+fileName)
+            self.curFTPDir = select
         except:
             self.set_Obs_File(select)
             
@@ -125,7 +137,7 @@ class App(tk.Tk):
         if ('SoSoFT' in fileSet[0]) or ('SoSoPro' in fileSet[0]):
             init_file, pp_file, feat_file, frc_file = fileSet
             init_data = self.read_csv(pp_file)
-            obs_data = self._csv(init_file)
+            obs_data = self.read_csv(init_file)
             date_obs = obs_data[0]['DATE_OBS']
             qclk_fname = init_data[0]['PR_LOCFNAME'].replace('fits', 'png')
 
@@ -138,7 +150,7 @@ class App(tk.Tk):
         items=os.path.basename(init_file).split("_")
         code=items[0].lower() ; version=items[1] ; cdate=items[2]
         observat=items[3].lower() ; fileType=items[4].lower()
-    #    init_data = read_csv(init_file)
+
         if not (init_data):
             print ("Error reading %s!" % init_file)
             return False
@@ -172,15 +184,34 @@ class App(tk.Tk):
                     if (os.path.isfile(image_file)):
                         print ("%s found in %s" % (qclk_fname,data_dir))
                     else:
-                        year=date_obs.split("-")[0]
-                        observatory_file=ftp2csv+"/"+code+"/"+year+"/"+"_".join([code,version,observat,"observatory"])+".csv"
-                        print ("Trying to reach %s" % observatory_file)
-                        oby_data=self.read_csv(observatory_file)
-                        if (oby_data):
-                            observatory=oby_data[0]['OBSERVAT'].lower()
-                            instrument=oby_data[0]['INSTRUME'].lower()
-                            qclk_url = ftp2qlk + "/".join([observatory,instrument,year])
+                    #    year=date_obs.split("-")[0]
+                        observatory=None
+                        instrument=None
+                        if 'SoSoFT' in fileSet[0]:
+                            observatory = "meudon"
+                            instrument = "Halpha"
+                        elif 'SoSoPro' in fileSet[0]:
+                            observatory = "meudon"
+                            instrument = "K3p"
+                        else:
+                            id_oby = init_data[0]['OBSERVATORY_ID']
+                            year=date_obs.split("-")[0]
+                            observatory_file=data_dir.replace("results/"+year, "results/")+"_".join([code,version,"observatory"])+".csv"
+                            print ("Trying to reach %s" % observatory_file)
+                            oby_data=self.read_csv(observatory_file)
+                            if (oby_data):
+                                for row in oby_data:
+                                    print(id_oby + " " +row['ID_OBSERVATORY'])
+                                    if row['ID_OBSERVATORY'] == id_oby:
+                                        observatory=row['OBSERVAT'].lower()
+                                        instrument=row['INSTRUME'].lower()
+                                        break
+                        if observatory is not None and instrument is not None:    
+                            qclk_url = data_dir.replace("results", "images/full/"+observatory+'/'+instrument)
+                            #qclk_url = ftp2qlk + "/".join([observatory,instrument,year])
                             image_file =  qclk_url + "/" + qclk_fname
+                        else:
+                            print ("Can't build QCLK_URL from %s" % observatory_file)
                 else:
                     image_file =  qclk_url + "/" + qclk_fname
 
@@ -193,6 +224,7 @@ class App(tk.Tk):
             print ("URL = %s" % url)
             print ("QCLK_URL = %s" % qclk_url)
             print ("QCLK_FNAME = %s" % qclk_fname)
+            print ("Image file = %s" % image_file)
 
         # Loading feature data
         if (feat_file is None):
@@ -223,19 +255,18 @@ class App(tk.Tk):
         y=np.linspace(min(Y),max(Y),6)
         plt.xticks(x)
         plt.yticks(y)
-
-        if (os.path.isfile(image_file)):
-            buff=self.load_image(image_file)
-            if (buff):
-                image = fromimage(buff)
-                enhanced_image = auto_contrast(image,low=0.,high=1.0)
-                enhanced_image = np.flipud(enhanced_image)
-                plt.imshow(enhanced_image,
-                           cmap=plt.cm.gray,origin='lower',
-                    extent=[min(X),max(X),min(Y),max(Y)])
-                min_val = np.min(image)
-                max_val = np.max(image)
-
+           
+        print ("Loading quiklook file = %s" % image_file)
+        buff = self.load_image(image_file)
+        if (buff):
+            image = fromimage(buff)
+            enhanced_image = auto_contrast(image, low=0., high=1.0)
+            enhanced_image = np.flipud(enhanced_image)
+            plt.imshow(enhanced_image,
+                       cmap=plt.cm.gray, origin='lower',
+                       extent=[min(X), max(X), min(Y), max(Y)])
+            min_val = np.min(image)
+            max_val = np.max(image)
 
         if (RSUN):
             theta = 2.*np.pi*np.array(range(361))/360.0
@@ -267,12 +298,11 @@ class App(tk.Tk):
                 plt.plot(Xc,Yc)
 
         plt.show()
-        
+           
     def read_csv(self, file):
         if (file.startswith("http:")) or \
             (file.startswith("ftp:")):
             output, error = pycurl(file,"-qO")
-            print(output)
             if (len(output) == 0): return []
             buff = io.StringIO(output.decode('utf-8'))
         else:
@@ -295,10 +325,15 @@ class App(tk.Tk):
         if (file.startswith("http:")) or \
             (file.startswith("ftp:")):
             try:
-                buff = urlopen(file).read()
-                file = cStringIO.StringIO(buff)
-            except:
+                req = urllib.request.Request(file)
+                resp = urllib.request.urlopen(req)
+                buff = resp.read()
+                file = io.BytesIO(buff)
+            #    buff = urlopen(file).read()
+            #    file = cStringIO.StringIO(buff)
+            except urllib.error.URLError as e:
                 print ("Can not load %s!" % file)
+                print('Reason: ', e.reason)
                 return None
         else:
             if not (os.path.isfile(file)):
