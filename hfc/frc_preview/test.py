@@ -8,7 +8,8 @@
 import os, io
 from ftplib import FTP
 import tkinter as tk
-from tkinter import filedialog, Listbox, Scrollbar, END, RIGHT, Y
+from tkinter import filedialog
+from ftpBrowsWidget import askFTPfilename
 from pycurl import pycurl
 import csv
 import matplotlib.pyplot as plt
@@ -30,59 +31,17 @@ class App(tk.Tk):
         self.geometry("800x400+200+200")
         self.title("Upload a Program Flyer to the Library Website")
         self.Appbutton = tk.Button(text='Choose a local init or obs CSV file', command = self.launch_file_dialog_box).pack()
-        self.Appbutton_FTP = tk.Button(text='Browse ftpbass2000', command = self.browse_ftpbass2000).pack()
-        self.scrollbar = tk.Scrollbar()
-        self.scrollbar.pack(side=RIGHT, fill=Y)
-        self.ftpFileList = tk.Listbox(self, width=500, height=20)
-        self.ftpFileList.bind('<Double-1>',self.update_FTP_Dir)
+        #self.Appbutton_FTP = tk.Button(text='Browse ftpbass2000', command = self.browse_ftpbass2000).pack()
+        self.Appbutton_FTP = tk.Button(text='Browse ftpbass2000', command = self.launch_FTP_dialog_box).pack()
         self.init_file = ''
     
     def launch_file_dialog_box(self):
         self.init_file = filedialog.askopenfilename()
         self.make_plot()
         
-#    def create_window(self):
-#        t = tk.Toplevel(self)
-#        t.wm_title("Browse ftpbass2000")
-#        l = tk.Label(t, text="Browse ftpbass2000")
-#        l.pack(side="top", fill="both", expand=True, padx=100, pady=100)
-    
-    def browse_ftpbass2000(self):
-        self.ftpFileList.pack()
-        self.ftpFileList.config(yscrollcommand=self.scrollbar.set)
-        self.scrollbar.config(command=self.ftpFileList.yview)
-        self.update_FTP_Dir(self)
-            
-    def update_FTP_Dir(self, event):
-        ##    first thing we do is connect to the ftp host        
-        ftp = FTP('ftpbass2000.obspm.fr')
-        ftp.login( user = 'anonymous', passwd='')
-        ftp.set_pasv(True)
-        if hasattr(event, 'type'):
-            select=self.ftpFileList.get(self.ftpFileList.curselection())
-        else:
-            select = "pub/helio/"
-        
-        if select == 'BACK':
-            reps = self.curFTPDir.split('/')
-            select = '/'.join(reps[0:len(reps)-1])
-        try:
-            ftp.cwd(select)
-            self.ftpFileList.delete(0, END)
-            self.ftpFileList.insert(0, 'BACK')
-            for fileName in ftp.nlst():
-                self.ftpFileList.insert(END, select+'/'+fileName)
-            self.curFTPDir = select
-        except:
-            self.set_Obs_File(select)
-            
-        ftp.close()
-    
-    def set_Obs_File(self, ftpFile):
-        self.init_file = "ftp://ftpbass2000.obspm.fr/" + ftpFile
-        print(self.init_file)
-        self.ftpFileList.pack_forget()
-        self.make_plot()
+    def launch_FTP_dialog_box(self):
+        self.init_file = askFTPfilename()
+        self.make_plot()                        
         
     def make_plot(self):
         VERBOSE = True
