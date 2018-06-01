@@ -9,6 +9,7 @@ import os, io
 from ftplib import FTP
 import tkinter as tk
 from tkinter import filedialog
+import tkinter.scrolledtext as tkst
 from ftpBrowsWidget import askFTPfilename
 from pycurl import pycurl
 import csv
@@ -33,26 +34,34 @@ class App(tk.Tk):
         self.Appbutton = tk.Button(text='Choose a local init or obs CSV file', command = self.launch_file_dialog_box).pack()
         #self.Appbutton_FTP = tk.Button(text='Browse ftpbass2000', command = self.browse_ftpbass2000).pack()
         self.Appbutton_FTP = tk.Button(text='Browse ftpbass2000', command = self.launch_FTP_dialog_box).pack()
+        self.zoneTxt = tkst.ScrolledText(
+            wrap   = 'word',  # wrap text at full words only
+        )
+        self.zoneTxt.pack()
         self.init_file = ''
     
     def launch_file_dialog_box(self):
         self.init_file = filedialog.askopenfilename()
-        self.make_plot()
+        if len(self.init_file):
+            self.make_plot()
         
     def launch_FTP_dialog_box(self):
         self.init_file = askFTPfilename()
-        self.make_plot()                        
+        if len(self.init_file):
+            self.make_plot()                        
         
     def make_plot(self):
         VERBOSE = True
         PIXELS=True
         QUICKLOOK=True
-        fileSet = self.makeFileSet()
+        fileSet = self.makeFileSet()        
         if fileSet is None:
-            print ("No filesetfound for %s!" % init_file)
-            exit()
+            print ("No filesetfound for %s!" % self.init_file)
+            self.zoneTxt.insert('insert', self.init_file)
+            return
         else:
             if VERBOSE: print("File Set is: ", fileSet)
+            self.zoneTxt.insert('insert', self.init_file)
 
         self.plot_feat(fileSet,
              PIXELS=PIXELS,
