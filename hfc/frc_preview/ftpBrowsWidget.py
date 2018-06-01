@@ -8,11 +8,11 @@ class ftpBrowseWidget(tk.Toplevel):
         self.wm_title("Browse ftpbass2000")
         self.geometry("800x400+200+200")
 
-        self.scrollbar = tk.Scrollbar()
-        #self.scrollbar.pack(side=RIGHT, fill=Y)
-        self.ftpList = tk.Listbox(self, width=500, height=20)
+        self.scrollbar = tk.Scrollbar(self)
+        self.scrollbar.pack(side=RIGHT, fill=Y)
+        self.ftpList = tk.Listbox(self)
         self.ftpList.bind('<Double-1>',self.update_FTP_Dir)
-        self.ftpList.pack()
+        self.ftpList.pack(side="left",fill="both", expand=True)
         self.ftpList.config(yscrollcommand=self.scrollbar.set)
         self.scrollbar.config(command=self.ftpList.yview)
         self.init_file = ''
@@ -37,6 +37,7 @@ class ftpBrowseWidget(tk.Toplevel):
             self.ftpList.insert(0, 'BACK')
             for fileName in ftp.nlst():
                 self.ftpList.insert(END, select+'/'+fileName)
+    
             self.curFTPDir = select
         except:
             self.init_file =  "ftp://ftpbass2000.obspm.fr/" + select
@@ -51,17 +52,6 @@ class ftpBrowseWidget(tk.Toplevel):
 def askFTPfilename(parent=None, **kwargs):
     """
     Return '' or the absolute path of the chosen file
-
-    Options:
-        * initialdir: initial folder whose content is displayed
-        * initialfile: initial selected item (just the name, not the full path)
-        * filetypes: [('name', '*.ext1|*.ext2|..'), ...]
-          show only files of given filetype ("*" for all files)
-        * okbuttontext: text displayed on the validate button, if None, the
-          default text corresponding to the mode is used (either Open or Save)
-        * cancelbuttontext: text displayed on the button that cancels the
-          selection.
-        * foldercreation: enable the user to create new folders if True (default)
     """
     dialog = ftpBrowseWidget(parent, **kwargs)
     dialog.wait_window(dialog)
