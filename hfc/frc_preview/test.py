@@ -8,7 +8,7 @@
 import os, io
 from ftplib import FTP
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, LEFT, Menu
 import tkinter.scrolledtext as tkst
 from ftpBrowsWidget import askFTPfilename
 from pycurl import pycurl
@@ -31,24 +31,39 @@ class App(tk.Tk):
         tk.Tk.__init__(self)
         self.geometry("800x400+200+200")
         self.title("Upload a Program Flyer to the Library Website")
-        self.Appbutton = tk.Button(text='Choose a local init or obs CSV file', command = self.launch_file_dialog_box).pack()
-        #self.Appbutton_FTP = tk.Button(text='Browse ftpbass2000', command = self.browse_ftpbass2000).pack()
-        self.Appbutton_FTP = tk.Button(text='Browse ftpbass2000', command = self.launch_FTP_dialog_box).pack()
+        self.menu = tk.Menu()
+        self.config(menu=self.menu)
+        self.filemenu = tk.Menu(self.menu)
+        self.menu.add_cascade(label="File", menu=self.filemenu)
+        self.filemenu.add_command(label="Choose a local init or obs CSV file", command=self.launch_file_dialog_box)
+        self.filemenu.add_command(label="Browse ftpbass2000", command=self.launch_FTP_dialog_box)
+        self.filemenu.add_separator()
+        self.filemenu.add_command(label="Exit", command=self.quit)
         self.zoneTxt = tkst.ScrolledText(
-            wrap   = 'word',  # wrap text at full words only
+            wrap   = 'word'  # wrap text at full words only            
         )
-        self.zoneTxt.pack()
+        self.zoneTxt.pack(fill="both", expand=True)
         self.init_file = ''
     
     def launch_file_dialog_box(self):
         self.init_file = filedialog.askopenfilename()
-        if len(self.init_file):
+        if self.isInitCSVfile():
             self.make_plot()
-        
+        else:
+            self.zoneTxt.insert('insert', self.init_file + " is not a valid init or obs CSV file" + "\n")
     def launch_FTP_dialog_box(self):
         self.init_file = askFTPfilename()
+        if self.isInitCSVfile():
+            self.make_plot()
+        else:
+            self.zoneTxt.insert('insert', self.init_file + " is not a valid init or obs CSV file" + "\n")
+            
+    def isInitCSVfile(self):
         if len(self.init_file):
-            self.make_plot()                        
+            if 'obs' in self.init_file or 'init' in self.init_file:
+                return True
+            else:
+                return False
         
     def make_plot(self):
         VERBOSE = True
@@ -57,11 +72,14 @@ class App(tk.Tk):
         fileSet = self.makeFileSet()        
         if fileSet is None:
             print ("No filesetfound for %s!" % self.init_file)
-            self.zoneTxt.insert('insert', self.init_file)
+            self.zoneTxt.insert('insert', "No fileset found for " + self.init_file + "\n")
             return
         else:
             if VERBOSE: print("File Set is: ", fileSet)
-            self.zoneTxt.insert('insert', self.init_file)
+        
+        self.zoneTxt.insert('insert', "Files set is:\n")
+        for item in fileSet:
+            self.zoneTxt.insert('insert', item + "\n")
 
         self.plot_feat(fileSet,
              PIXELS=PIXELS,
@@ -194,6 +212,8 @@ class App(tk.Tk):
             print ("QCLK_FNAME = %s" % qclk_fname)
             print ("Image file = %s" % image_file)
 
+        self.zoneTxt.insert('insert', "Quiclook is " + image_file + "\n")
+        
         # Loading feature data
         if (feat_file is None):
             feat_file = init_file.replace("_init.csv","_feat.csv")
@@ -204,7 +224,7 @@ class App(tk.Tk):
 
         if (VERBOSE):
             print ("Number of features = %i" % len(feat_data))
-
+        self.zoneTxt.insert('insert', "Number of features = %i" % len(feat_data) + "\n")
     #    if (os.path.isfile(track_file)):
     #        track_data = read_csv(track_file)
     #        if not (track_data):
@@ -212,6 +232,7 @@ class App(tk.Tk):
     #            return False
 
         plt.figure(figsize=(8,8))
+        plt.title(date_obs)
 
         X = np.arange(naxis1)
         Y = np.arange(naxis2)
@@ -235,7 +256,8 @@ class App(tk.Tk):
                        extent=[min(X), max(X), min(Y), max(Y)])
             min_val = np.min(image)
             max_val = np.max(image)
-
+        else:
+            self.zoneTxt.insert('insert', "Quicklook file not found: " + image_file + "!\n")
         if (RSUN):
             theta = 2.*np.pi*np.array(range(361))/360.0
             xs = rsun*np.cos(theta) + center_x 
