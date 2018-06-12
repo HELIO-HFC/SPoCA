@@ -382,7 +382,9 @@ if __name__ == "__main__":
         
     # loading previous tracking data
     codeName = "_".join([spoca_job.code.lower(),"".join(str(VERSION).split("."))])
-    prevTrackData = get_prev_trackdata(starttime, endtime, codeName, spoca_job.observatory.lower(), map_directory)
+    start = starttime + timedelta(days=-15)
+    end = starttime + timedelta(hours=-2)
+    prevTrackData = get_prev_trackdata(start, end, codeName, spoca_job.observatory.lower(), map_directory)
     if len(prevTrackData) == 0:
         log.warning("No previous tracking data between %s and %s", starttime, endtime)
     else:
