@@ -147,16 +147,19 @@ def query_idoc(tstart, tend, cadence=['1 min'],
     sdo_data_list = search(DATES=[tstart, tend],
                            WAVES=waves,
                            CADENCE=cadence)
-
+    
     # Modif Pablo 2014-10-23 - Xavier 2015-03-05
     for current_row in sdo_data_list:
         if (local):
             date_str = str(current_row.date_obs).split()[0]
             time_str = str(current_row.date_obs).split()[1]
-            ms = time_str.rsplit(".")[1]
-            time_str = time_str.split(".")[0]
-            ms_str = ms[0:2]
-
+            if '.' in time_str:
+                ms = time_str.split(".")[1]
+                time_str = time_str.split(".")[0]
+                ms_str = ms[0:2]
+            else:
+                ms_str = '00'
+                
             current_fileid = current_row.ias_location + \
                 "/S00000/image_lev1.fits"
             current_outputfilename = 'aia.lev1.' + str(current_row.wave) + \
