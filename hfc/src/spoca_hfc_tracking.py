@@ -449,7 +449,7 @@ if __name__ == "__main__":
                 curDate = datetime.strptime(curTrackData['DATE_OBS'],INPUT_TFORMAT)
                 curX = curTrackData['FEAT_X_PIX']
                 curY = curTrackData['FEAT_Y_PIX']
-                minDist = 5000
+                minDist = 100
                 possibleMatch = None
                 for prevtrckData in prevTrackData:
                     prevDate = datetime.strptime(prevtrckData['DATE_OBS'],INPUT_TFORMAT)                    
@@ -461,7 +461,7 @@ if __name__ == "__main__":
                             #log.info("%s match with track_id %s", curTrackData['TRACK_ID'],prevtrckData['TRACK_ID'])
                             possibleMatch = {"id": curTrackData['TRACK_ID'], "x":curX, "y":curY, "prev_id":prevtrckData['TRACK_ID'], "prev_x":prevX, "prev_y":prevY, "dist":dist}                            
                             break
-                        if dist < 500 and dist < minDist:
+                        if dist < minDist:
                             #log.info("%s could match with track_id %s with a distance of %s", curTrackData['TRACK_ID'],prevtrckData['TRACK_ID'], dist)
                             #log.info("%s %s  %s %s", curX,prevX, curY, prevY)
                             minDist = dist
