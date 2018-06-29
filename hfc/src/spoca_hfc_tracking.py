@@ -382,9 +382,7 @@ if __name__ == "__main__":
         
     # loading previous tracking data
     codeName = "_".join([spoca_job.code.lower(),"".join(str(VERSION).split("."))])
-    start = starttime + timedelta(days=-15)
-    end = starttime + timedelta(hours=-2)
-    prevTrackData = get_prev_trackdata(start, end, codeName, spoca_job.observatory.lower(), map_directory)
+    prevTrackData = get_prev_trackdata(starttime, endtime, codeName, spoca_job.observatory.lower(), map_directory)
     if len(prevTrackData) == 0:
         log.warning("No previous tracking data between %s and %s", starttime, endtime)
     else:
@@ -445,15 +443,16 @@ if __name__ == "__main__":
                     current_track_data[i]['TRACK_ID'] = trckIdHistory['new'][index]
                     log.info("%s already associated with previous track id %s", trckIdHistory['ori'][index], trckIdHistory['new'][index])
                     continue
-                    
+                
+                # else check if this current tracking data already exist in prevTrackData   
                 curDate = datetime.strptime(curTrackData['DATE_OBS'],INPUT_TFORMAT)
                 curX = curTrackData['FEAT_X_PIX']
                 curY = curTrackData['FEAT_Y_PIX']
-                minDist = 100
+                minDist = 10
                 possibleMatch = None
                 for prevtrckData in prevTrackData:
                     prevDate = datetime.strptime(prevtrckData['DATE_OBS'],INPUT_TFORMAT)                    
-                    if (curDate - timedelta(days=2)) < prevDate:
+                    if curDate == prevDate:
                         prevX = int(prevtrckData['FEAT_X_PIX'])
                         prevY = int(prevtrckData['FEAT_Y_PIX'])
                         dist = sqrt((curX-prevX)**2 + (curY-prevY)**2)
