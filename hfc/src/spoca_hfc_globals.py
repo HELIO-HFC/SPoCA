@@ -96,7 +96,8 @@ DB_FILE = os.path.join(DB_DIR, "spoca_hfc_db.sql")
 FTP_URL = "ftp://ftpbass2000.obspm.fr/pub/helio"
 
 # data provider server urls
-VSO_URL = "http://vso2.tuc.noao.edu"
+#VSO_URL = "http://vso2.tuc.noao.edu"
+VSO_URL = "http://netdrms01.nispdc.nso.edu"
 SDO_URL = "http://sdo4.nascom.nasa.gov"
 JSOC_URL = "http://jsoc.stanford.edu"
 SDAC_URL = "http://sohodata.nascom.nasa.gov"

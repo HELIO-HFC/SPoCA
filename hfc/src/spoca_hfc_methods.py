@@ -261,8 +261,10 @@ def query_jsoc(ds, starttime, endtime,
     """
 
     # Define starttime and endtime (in jsoc cgi time format)
-    stime = starttime - timedelta(seconds=10)  # starttime - 10 sec.
-    etime = endtime + timedelta(seconds=10)  # endtime + 10 sec.
+    #stime = starttime - timedelta(seconds=10)  # starttime - 10 sec.
+    #etime = endtime + timedelta(seconds=10)  # endtime + 10 sec.
+    stime = starttime
+    etime = endtime
     stime = stime.strftime(JSOC_IN_TFORMAT)
     etime = etime.strftime(JSOC_IN_TFORMAT)
 
@@ -288,9 +290,13 @@ def query_jsoc(ds, starttime, endtime,
     jsoclist = []
     for current_row in flist:
         current_items = current_row.split()
-        current_fileid = ":".join([ds_id,
-                                  str(current_items[2]),
-                                  str(current_items[0])])
+        current_outputfilename = ds + '.' + str(current_items[2]) + \
+                'A_' + str(current_items[1]) + '.image_lev1.fits'
+        current_fileid = VSO_URL + "/cgi-bin/netdrms/drms_export.cgi?series="+ds_id
+        current_fileid+=";compress=rice"
+        record = str(current_items[2]) + '_' + str(current_items[0])+"-"+str(current_items[0])
+        current_fileid = current_fileid+";record="+record
+        
         if (wavelength):
             if (float(current_items[2]) != float(wavelength)):
                 continue
@@ -300,7 +306,8 @@ def query_jsoc(ds, starttime, endtime,
                                               JSOC_OUT_TFORMAT),
                              'provider': "JSOC",
                              'min_wave': current_items[2],
-                             'max_wave': current_items[2]})
+                             'max_wave': current_items[2],
+                             'output_filename': current_outputfilename})
     return jsoclist
 
 
@@ -471,9 +478,12 @@ def build_filelist(observatory, instrument, wavelength, starttime, endtime,
                 cadence = 60  # seconds
             LOG.info("Retrieving list of files from IDOC (wavelength=%i)...",
                      wave)
-            current_idoc = query_idoc(starttime, endtime,
-                                      waves=[str(int(wave))],
-                                      cadence=[int(cadence)], local=local)
+            #current_idoc = query_idoc(starttime, endtime,
+             #                         waves=[str(int(wave))],
+              #                        cadence=[int(cadence)], local=local)
+            current_idoc = query_jsoc("aia.lev1", starttime, endtime,
+                wavelength=wave,
+                timeout=180)
             if (current_idoc):
                 LOG.info("%i records returned", len(current_idoc))
                 datalist.append(current_idoc)
@@ -494,7 +504,7 @@ def build_filelist(observatory, instrument, wavelength, starttime, endtime,
 
     # Sort the list(s) of files by increasing dates with the given cadence
     filelist = sort_list(datalist, date_obs=timelist, dt_max=dt_max)
-
+#    print filelist
     return filelist
 
 
