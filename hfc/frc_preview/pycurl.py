@@ -21,7 +21,7 @@ def pycurl(url, QUIET=False, *args, **kwargs):
                 
     cmd += " "+url
 
-    if not (QUIET): print cmd
+    if not (QUIET): print (cmd)
     proc = subprocess.Popen(cmd,shell=True,
                             stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     output, error = proc.communicate()
@@ -40,8 +40,8 @@ if (__name__ == "__main__"):
     
     for k,v in Namespace.__dict__.items(): keys[k] = v
     output, error = pycurl(url,**keys)
-    print "output:"
-    print output
-    print "error:"
-    print error
+    print ("output:")
+    print (output)
+    print ("error:")
+    print (error)
 
