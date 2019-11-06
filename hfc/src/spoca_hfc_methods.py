@@ -37,6 +37,7 @@ import sunpy.instr.aia
 #from memory_profiler import profile
 import sdo_client_idoc
 import logging
+from bs4 import BeautifulSoup
 
 
 
@@ -310,6 +311,113 @@ def query_jsoc(ds, starttime, endtime,
                              'output_filename': current_outputfilename})
     return jsoclist
 
+def query_AIA_RT_data(wavelength=None, timeout=180):
+
+    """
+    This method allows to query the LMSAL AIA server for real time AIA data
+    """
+
+    urlBase = "http://sdowww.lmsal.com/sdomedia/SunInTime/mostrecent/"
+    # build all YYYY/MM/DD string from between start and end time
+
+    if (wavelength):
+        extension = "_%04d.fits" % (wavelength)
+    else:
+        extension = '.fits'
+
+    fileList = []
+    try:
+        url = urlBase
+        LOG.info("Querying " + url)
+        f = urllib2.urlopen(url, None, timeout)
+    except urllib2.URLError, e:
+        LOG.error("Can not open %s", url)
+        LOG.error(e)
+    else:
+        soup = BeautifulSoup(f, 'html.parser')
+        tmp =  [url + '/' + node.get('href') for node in soup.find_all('a') if node.get('href').endswith(extension)]
+        for f in tmp:
+            fileList.append(f)
+
+    # find the most recent file
+    currentTime = datetime(1950, 1, 1)
+    latestFile = ''
+    for current_row in fileList:
+        current_outputfilename = os.path.basename(current_row)
+        time_start = datetime.strptime(current_outputfilename, 'AIA%Y%m%d_%H%M%S' + extension)
+        if time_start > currentTime:
+               latestFile = current_row
+        
+    lmsalList = []
+    current_outputfilename = os.path.basename(latestFile)
+    current_fileid = latestFile
+    time_start = datetime.strptime(current_outputfilename, 'AIA%Y%m%d_%H%M%S' + extension)
+    # build target filename which will be used for download
+    filename = 'aia.lev1.' + str(int(wavelength)) + 'A_' + time_start.strftime('%Y-%m-%dT%H:%M:%S') + '.image_lev1.fits'
+    lmsalList.append({'fileid': current_fileid,
+                         'filename': filename,
+                         'time_start': time_start,
+                         'provider': urlBase,
+                         'min_wave': wavelength,
+                         'max_wave': wavelength,
+                         'output_filename': filename})
+#                         'output_filename': current_outputfilename})
+    
+    return lmsalList
+
+def query_AIA_lmsal(starttime, endtime,
+               wavelength=None,
+               timeout=180):
+
+    """
+    This method allows to query the LMSAL AIA server for real time AIA data
+    """
+
+    stime = starttime
+    etime = endtime
+
+    urlBase = "http://sdowww.lmsal.com/sdomedia/SunInTime/"
+    # build all YYYY/MM/DD string from between start and end time
+    datePartList = []
+    delta = timedelta(days=1)
+    while stime <= etime:
+        datePartList.append("%4s/%2s/%2s" % (stime.strftime("%Y"), stime.strftime("%m"), stime.strftime("%d")))
+        stime = stime + delta 
+
+    if (wavelength):
+        extension = "_%04d.fits" % (wavelength)
+    else:
+        extension = '.fits'
+
+    fileList = []
+    for dt in datePartList:
+        try:
+            url = urlBase + dt
+            print("Querying " + url)
+            LOG.info("Querying " + url)
+            f = urllib2.urlopen(url, None, timeout)
+        except urllib2.URLError, e:
+            LOG.error("Can not open %s", url)
+            LOG.error(e)
+        else:
+            soup = BeautifulSoup(f, 'html.parser')
+            tmp =  [url + '/' + node.get('href') for node in soup.find_all('a') if node.get('href').endswith(extension)]
+            for f in tmp:
+                fileList.append(f)
+
+    lmsalList = []
+    for current_row in fileList:
+        current_outputfilename = os.path.basename(current_row)
+        current_fileid = current_row
+        lmsalList.append({'fileid': current_fileid,
+                         'filename': current_outputfilename,
+                         'time_start': datetime.strptime(current_outputfilename, 'AIA%Y%m%d_%H%M%S' + extension),
+                         'provider': urlBase,
+                         'min_wave': wavelength,
+                         'max_wave': wavelength,
+                         'output_filename': current_outputfilename})
+    
+    return lmsalList
 
 def query_saio(instrument="EIT",
                begindate=(TODAY - timedelta(days=1)),
@@ -476,19 +584,21 @@ def build_filelist(observatory, instrument, wavelength, starttime, endtime,
         elif (instrument == "aia"):
             if (cadence is None) or (cadence < 60):
                 cadence = 60  # seconds
-            LOG.info("Retrieving list of files from IDOC (wavelength=%i)...",
+            LOG.info("Retrieving list of files (wavelength=%i)...",
                      wave)
-            #current_idoc = query_idoc(starttime, endtime,
-             #                         waves=[str(int(wave))],
-              #                        cadence=[int(cadence)], local=local)
-            current_idoc = query_jsoc("aia.lev1", starttime, endtime,
+            if starttime is None:
+                # real time mode => get the latest data
+                current_idoc = query_AIA_RT_data(wavelength=wave, timeout=180)
+                cadence = None
+            else:
+                current_idoc = query_jsoc("aia.lev1", starttime, endtime,
                 wavelength=wave,
                 timeout=180)
             if (current_idoc):
                 LOG.info("%i records returned", len(current_idoc))
                 datalist.append(current_idoc)
             else:
-                LOG.error("Can not retrieve list of files from IDOC!")
+                LOG.error("Can not retrieve list of files!")
                 return []
 
     # If sample is provided, build a list of times
@@ -503,8 +613,10 @@ def build_filelist(observatory, instrument, wavelength, starttime, endtime,
             currenttime += timedelta(seconds=int(cadence))
 
     # Sort the list(s) of files by increasing dates with the given cadence
+    if (instrument == "aia") :
+        dt_max = 900
     filelist = sort_list(datalist, date_obs=timelist, dt_max=dt_max)
-#    print filelist
+
     return filelist
 
 
@@ -609,7 +721,6 @@ def update_history(history_file, fileset):
 
 def aia_preprocessing(file_name):
     hdulist = fits.open(file_name)
-    #print(hdulist.info())
     hdulist[1].verify("fix")
     map=sunpy.map.sources.AIAMap(hdulist[1].data, hdulist[1].header)
     new_map=sunpy.instr.aia.aiaprep(map)

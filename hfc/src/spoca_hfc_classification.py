@@ -120,10 +120,13 @@ def setup_spoca_hfc(config_file, starttime, endtime,
              spoca_job.observatory, spoca_job.instrument,
              str(spoca_job.wavelength))
     LOG.info("Feature --> %s", spoca_job.hfc.feature_name)
-    LOG.info(
+    if starttime is not None:
+        LOG.info(
         "Time range --> [%s, %s]",
         starttime.strftime(INPUT_TFORMAT),
         endtime.strftime(INPUT_TFORMAT))
+    else:
+        LOG.info("Time range is None => getting real time data")
     if (cadence):
         LOG.info("Detection cadence --> %s sec.", str(cadence))
     LOG.info("SPoCA classification config. file --> %s",
@@ -279,8 +282,14 @@ if (__name__ == "__main__"):
     config_file = args.config_file[0]
     output_directory = os.path.abspath(args.output_dir)
     data_directory = os.path.abspath(args.data_dir)
-    starttime = datetime.strptime(args.starttime, INPUT_TFORMAT)
-    endtime = datetime.strptime(args.endtime, INPUT_TFORMAT)
+    if args.starttime is not None:
+        starttime = datetime.strptime(args.starttime, INPUT_TFORMAT)
+    else:
+        starttime = None
+    if args.endtime is not None:
+        endtime = datetime.strptime(args.endtime, INPUT_TFORMAT)
+    else:
+        endtime = None
     cadence = args.cadence
     pjobs = args.jobs
     db_file = args.db_file
@@ -325,10 +334,10 @@ if (__name__ == "__main__"):
     if not (os.path.isfile(db_file)):
         LOG.error("%s does not exist!", db_file)
         sys.exit(1)
-
-    if (starttime > endtime):
-        LOG.error("starttime is older than endtime!")
-        sys.exit(1)
+    if starttime is not None:
+        if (starttime > endtime):
+            LOG.error("starttime is older than endtime!")
+            sys.exit(1)
 
     # Setup spoca hfc jobs
     LOG.info("Building spoca_hfc job(s)...")
@@ -361,10 +370,10 @@ if (__name__ == "__main__"):
     for current_job in spoca_jobs:
 
         LOG.info(
-            "Starting job #%i for %s/%s observations on %s",
+            "Starting job #%i for %s/%s observations on %s %s %s",
             current_job.job_id,
             current_job.observatory, current_job.instrument,
-            str(current_job.fileset[0]["time_start"]))
+            str(current_job.fileset[0]["time_start"]), str(current_job.fileset[0]["filename"]), str(current_job.fileset[0]["fileid"]))
         current_job.start()
         running.append(current_job)
         npending -= 1

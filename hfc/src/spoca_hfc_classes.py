@@ -596,7 +596,7 @@ class spoca_hfc(threading.Thread, segmentation):
 
         # For SDO data, download RICE compressed files and use jpg
         if (observatory.upper() == "SDO"):
-            rice_compression = True
+            rice_compression = False
             qlk_ext = ".jpg"
             qlk_quality = 80
         elif (observatory.upper() == "SOHO"):
