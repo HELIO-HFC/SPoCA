@@ -28,6 +28,7 @@ from ssw import tim2carr
 import gc
 from gc import *
 import spoca_hfc_methods
+from jsoc_client import jsoc
 
 # Import spoca hfc global variables
 try:
@@ -474,8 +475,10 @@ class spoca_hfc(threading.Thread, segmentation):
         if the current fileset has been already processed
         or not"""
 
-        fileid = self.fileset[0]["fileid"]
-
+        if self.fileset[0]["fileid"] is not None:
+            fileid = self.fileset[0]["fileid"]
+        else:
+            fileid = self.fileset[0]["output_filename"]
         # if no db_file provided, then process fileset anyway
         if (self.db_file is None):
             return False
@@ -610,29 +613,40 @@ class spoca_hfc(threading.Thread, segmentation):
             return False
 
         for i, current_set in enumerate(fileset):
-            current_file = current_set["fileid"]
-            current_output_filename = current_set["output_filename"]
-
-            # If input filepaths are urls, then download file
-            current_url = ""
-            if (current_file.startswith("http:")) or \
-                    (current_file.startswith("ftp:")):
-                current_url = current_file
-
-                LOG.info("Fetching %s...", current_file)
-                localFile = download_file(
-                    current_file,
-                    filename=current_set["filename"],
-                    data_directory=data_directory,
-                    rice_compression=rice_compression)
-                if (len(localFile) == 0):
-                    LOG.error("Downloading %s has failed!", current_file)
-                    self.terminated = True
-                    return False
-                else:
-                    LOG.info("%s downloaded", localFile)
+            if current_set["fileid"] is None:
+                starttime = current_set["time_start"]
+                endtime = current_set["time_start"]
+                wavelength = current_set["min_wave"]
+                fnParts = current_set["output_filename"].split('.')
+                ds = fnParts[0] + '.' + fnParts[1]
+                j_soc = jsoc(ds, realtime=True, starttime=starttime, endtime=endtime, wavelength = wavelength, notify='christian.renie@obspm.fr', verbose=True)
+                localFile = j_soc.get_fits_url_quick(output_dir=data_directory)
+                current_output_filename = current_set["output_filename"]
+                current_url = current_set["output_filename"]
             else:
-                localFile = current_file
+                current_file = current_set["fileid"]
+                current_output_filename = current_set["output_filename"]
+
+                # If input filepaths are urls, then download file
+                current_url = ""
+                if (current_file.startswith("http:")) or \
+                        (current_file.startswith("ftp:")):
+                    current_url = current_file
+
+                    LOG.info("Fetching %s...", current_file)
+                    localFile = download_file(
+                        current_file,
+                        filename=current_set["filename"],
+                        data_directory=data_directory,
+                        rice_compression=rice_compression)                
+                else:
+                    localFile = current_file
+            if (len(localFile) == 0):
+                LOG.error("Downloading %s has failed!", current_file)
+                self.terminated = True
+                return False
+            else:
+                LOG.info("%s downloaded", localFile)
             self.localset.append(localFile)
 
             LOG.info("Pre-processing %s file...", localFile)

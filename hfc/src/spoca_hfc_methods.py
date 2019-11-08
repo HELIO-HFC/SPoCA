@@ -38,6 +38,7 @@ import sunpy.instr.aia
 import sdo_client_idoc
 import logging
 from bs4 import BeautifulSoup
+from jsoc_client import jsoc
 
 
 
@@ -305,6 +306,40 @@ def query_jsoc(ds, starttime, endtime,
                              'time_start':
                             datetime.strptime(current_items[1],
                                               JSOC_OUT_TFORMAT),
+                             'provider': "JSOC",
+                             'min_wave': current_items[2],
+                             'max_wave': current_items[2],
+                             'output_filename': current_outputfilename})
+    return jsoclist
+
+def query_jsoc2(ds, starttime, endtime,
+               wavelength=None,
+               timeout=180):
+
+    """
+    This method allows to query the JSOC AIA server.
+    """
+
+    stime = starttime
+    etime = endtime
+    stime = stime.strftime(JSOC_IN_TFORMAT)
+    etime = etime.strftime(JSOC_IN_TFORMAT)
+
+    j_soc = jsoc(ds, realtime=True, starttime=starttime, endtime=endtime, wavelength = wavelength, notify='christian.renie@obspm.fr')
+    info = j_soc.show_info(key=["T_REC_index", "T_REC", "WAVELNTH"])
+
+    jsoclist = []
+    for current_row in info.split("\n")[1:-1]:
+        current_items = current_row.split()
+        current_outputfilename = ds + '.' + str(current_items[2]) + 'A_' + str(current_items[1]) + '.image_lev1.fits'
+        
+        if (wavelength):
+            if (float(current_items[2]) != float(wavelength)):
+                continue
+            jsoclist.append({'fileid': None, 'filename': None,
+                             'time_start':
+                            datetime.strptime(current_items[1],
+                                              '%Y-%m-%dT%H:%M:%SZ'),
                              'provider': "JSOC",
                              'min_wave': current_items[2],
                              'max_wave': current_items[2],
@@ -586,17 +621,16 @@ def build_filelist(observatory, instrument, wavelength, starttime, endtime,
                 cadence = 60  # seconds
             LOG.info("Retrieving list of files (wavelength=%i)...",
                      wave)
-            if starttime is None:
-                # real time mode => get the latest data
-                current_idoc = query_AIA_RT_data(wavelength=wave, timeout=180)
-                cadence = None
+            # use JSOC2 server (for real time data) if starttime in less than one month from today
+            if starttime > (datetime.today() - timedelta(days=30)):
+                current_jsoc = query_jsoc2("aia.lev1_nrt2", starttime, endtime, wavelength=wave, timeout=180)
             else:
-                current_idoc = query_jsoc("aia.lev1", starttime, endtime,
+                current_jsoc = query_jsoc("aia.lev1", starttime, endtime,
                 wavelength=wave,
                 timeout=180)
-            if (current_idoc):
-                LOG.info("%i records returned", len(current_idoc))
-                datalist.append(current_idoc)
+            if (current_jsoc):
+                LOG.info("%i records returned", len(current_jsoc))
+                datalist.append(current_jsoc)
             else:
                 LOG.error("Can not retrieve list of files!")
                 return []
@@ -613,8 +647,6 @@ def build_filelist(observatory, instrument, wavelength, starttime, endtime,
             currenttime += timedelta(seconds=int(cadence))
 
     # Sort the list(s) of files by increasing dates with the given cadence
-    if (instrument == "aia") :
-        dt_max = 900
     filelist = sort_list(datalist, date_obs=timelist, dt_max=dt_max)
 
     return filelist
