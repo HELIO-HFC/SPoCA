@@ -208,7 +208,8 @@ class jsoc():
 
         res = ''
         fetch_resp = self.fetch("exp_request", method='url_quick')
-        if (fetch_resp is None): sys.exit(0)
+        if (fetch_resp is None):
+            return ''
         if (fetch_resp['status'] == 0):
             #downloading file from info given in the response
             data = fetch_resp['data'][0]
