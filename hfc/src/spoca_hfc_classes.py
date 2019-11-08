@@ -524,6 +524,12 @@ class spoca_hfc(threading.Thread, segmentation):
         cmd = "SELECT ID FROM %s" % (DB_TABLES["HISTORY"])
         cmd += " WHERE (ID=%i)" % (self.job_id)
         LOG.debug(cmd)
+
+        if self.fileset[0]["fileid"] is not None:
+            fileid = self.fileset[0]["fileid"]
+        else:
+            fileid = self.fileset[0]["output_filename"]
+
         isentry = sqlite_query(self.db_file, cmd, fetchall=False)
         if not (isentry):
             cmd2 = ("INSERT INTO %s VALUES "
@@ -534,7 +540,7 @@ class spoca_hfc(threading.Thread, segmentation):
                 self.hfc.obs_info[0]["ID_OBSERVATORY"],
                 self.hfc.frc_info[0]["ID_FRC_INFO"],
                 quote(self.hfc.init_info[0]["DATE_OBS"]),
-                quote(self.fileset[0]["fileid"]),
+                quote(fileid),
                 quote(self.classmap),
                 quote(self.hfc.init_file),
                 quote(self.hfc.feat_file),
@@ -555,7 +561,7 @@ class spoca_hfc(threading.Thread, segmentation):
                 self.hfc.obs_info[0]["ID_OBSERVATORY"],
                 self.hfc.frc_info[0]["ID_FRC_INFO"],
                 quote(self.hfc.init_info[0]["DATE_OBS"]),
-                quote(self.fileset[0]["fileid"]),
+                quote(fileid),
                 quote(self.classmap),
                 quote(self.hfc.init_file),
                 quote(self.hfc.feat_file),
