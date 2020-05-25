@@ -227,10 +227,10 @@ class jsoc():
             filename = filename+'.fits'
             if self.realtime:
                 download_url = 'http://jsoc2.stanford.edu'+data['filename']
-                res = download_file(download_url, target_directory=output_dir, filename=filename, user='hmiteam', passwd='hmiteam')
+                res = download_file(download_url, target_directory=output_dir, filename=filename, user='hmiteam', passwd='hmiteam', timeout=10)
             else:
                 download_url = 'http://jsoc.stanford.edu'+data['filename']
-                res = download_file(download_url, target_directory=output_dir, filename=filename)
+                res = download_file(download_url, target_directory=output_dir, filename=filename, timeout=10)
 
             if (self.verbose): print "Downloading %s to %s ..." % (download_url, output_dir+filename)
 
