@@ -629,6 +629,7 @@ class spoca_hfc(threading.Thread, segmentation):
                 localFile = j_soc.get_fits_url_quick(output_dir=data_directory)
                 current_output_filename = current_set["output_filename"]
                 current_url = current_set["output_filename"]
+				current_file = current_set["output_filename"]
             else:
                 current_file = current_set["fileid"]
                 current_output_filename = current_set["output_filename"]

@@ -14,6 +14,7 @@ import time
 import cStringIO
 import csv
 import sqlite3
+#import threading
 
 def sqlite_get(sqlite_file,cmd):
 
@@ -223,13 +224,17 @@ def download_file(url,
                     filename=os.path.basename(url)
             target=os.path.join(target_directory,filename)
             if not (os.path.isfile(target)):
+                #timer = threading.Timer(120, connect.sock.shutdown, [socket.SHUT_RD])
+                #timer.start()
                 try:
+                    if not (quiet): print "Reading remote %s" % (url)
                     fw = open(target,'wb')
                     fw.write(connect.read())
                 except IOError as e:
                     if not (quiet): print "Can not download %s!" % (url)
                     break
                 else:
+                 #   timer.cancel()
                     fw.close()
                     break
             else:
@@ -243,3 +248,4 @@ def add_quote(string,double=False):
         return "\"" + string + "\""
     else:
         return "\'" + string + "\'"
+
