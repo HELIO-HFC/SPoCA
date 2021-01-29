@@ -120,7 +120,14 @@ class jsoc():
  #               return None
 #            fetch_resp[it[0][1:-1]] = "".join(it[1].split("\""))
  #       return fetch_resp
-         return json.loads(resp)
+         try:
+             fetch_resp = json.loads(resp)
+         except ValueError as e:
+             print "Error in jsoc_fetch response! %s" % (e)
+             print "Query was: %s" % (self.url)
+             print "Returned response: %s" % (resp)
+             return None
+         return fetch_resp
 
 
     def build_show_info(self, key=None):

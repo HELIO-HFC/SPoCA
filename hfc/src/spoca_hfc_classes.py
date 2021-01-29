@@ -524,12 +524,10 @@ class spoca_hfc(threading.Thread, segmentation):
         cmd = "SELECT ID FROM %s" % (DB_TABLES["HISTORY"])
         cmd += " WHERE (ID=%i)" % (self.job_id)
         LOG.debug(cmd)
-
         if self.fileset[0]["fileid"] is not None:
             fileid = self.fileset[0]["fileid"]
         else:
             fileid = self.fileset[0]["output_filename"]
-
         isentry = sqlite_query(self.db_file, cmd, fetchall=False)
         if not (isentry):
             cmd2 = ("INSERT INTO %s VALUES "
@@ -629,7 +627,7 @@ class spoca_hfc(threading.Thread, segmentation):
                 localFile = j_soc.get_fits_url_quick(output_dir=data_directory)
                 current_output_filename = current_set["output_filename"]
                 current_url = current_set["output_filename"]
-				current_file = current_set["output_filename"]
+                current_file = current_set["output_filename"]
             else:
                 current_file = current_set["fileid"]
                 current_output_filename = current_set["output_filename"]
@@ -648,7 +646,8 @@ class spoca_hfc(threading.Thread, segmentation):
                         rice_compression=rice_compression)                
                 else:
                     localFile = current_file
-            if (len(localFile) == 0):
+            #if (len(localFile) == 0):
+            if localFile is None:
                 LOG.error("Downloading %s has failed!", current_file)
                 self.terminated = True
                 return False
