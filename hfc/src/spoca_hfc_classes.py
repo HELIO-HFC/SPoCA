@@ -23,7 +23,7 @@ import numpy as np
 from astropy.io import fits
 from improlib import image2chain, poly_area
 from wcs import convert_hpc_hg
-from ssw import tim2carr
+from ssw import tim2carr, get_sun
 #from memory_profiler import profile
 import gc
 from gc import *
@@ -1166,10 +1166,10 @@ class hfc():
 
         if ("SOLAR_B0" in header):
             b0 = header['SOLAR_B0']
-        else:
-            LOG.warning("SOLAR_B0 set to 0 by default!")
-            b0 = 0.0
-
+        if (b0 == 0):
+            ephem = get_sun(datetime.strptime(date_obs, HFC_TFORMAT))
+            b0 = ephem[11]
+		
         if ("D_SUN" in header):
             Dsun = header['D_SUN']
         if (Dsun == 0.0):
